@@ -14,6 +14,8 @@
   var FOCUS = (q.get("focus") || "").toLowerCase();
   var GUIDES = q.get("guides") === "1" || q.get("guides") === "true";
   var PREVIEW = q.get("preview") === "1" || q.get("preview") === "true";
+  // ?layer=under → the bottom OBS layer: only the looping character videos, placed exactly where the cameras go
+  var UNDER = (q.get("layer") || "").toLowerCase() === "under";
   var POLL_MS = +(q.get("poll") || 4000);
 
   var stage = document.getElementById("stage");
@@ -649,9 +651,42 @@
 
   /* ---------------- render ---------------- */
   var content;
+  var UVIDS = {};
+  function renderUnder(L) {
+    var root = document.getElementById("under") || el("div", "", stage); root.id = "under";
+    var keep = {};
+    L.slots.forEach(function (s) {
+      if (s.map || !s.who) return;
+      var src = s.who.video, still = s.who.art || s.who.portrait;
+      if (!src && !still) return;
+      var key = s.id + "|" + (src || still); keep[key] = 1;
+      var n = UVIDS[key];
+      if (!n) {
+        if (src) {
+          n = document.createElement("video"); n.muted = true; n.loop = true; n.autoplay = true; n.playsInline = true;
+          n.setAttribute("muted", ""); n.setAttribute("playsinline", ""); n.preload = "auto"; n.src = src; if (still) n.poster = still;
+        } else { n = document.createElement("div"); n.style.backgroundImage = "url('" + still + "')"; n.style.backgroundSize = "cover"; n.style.backgroundPosition = "center 30%"; }
+        n.className = "under-slot"; UVIDS[key] = n;
+      }
+      root.appendChild(n);
+      // bleed 6px past the window so no gap shows at the frame edge
+      place(n, s.x - 6, s.y - 6, s.w + 12, s.h + 12);
+      if (n.play) { var pr = n.play(); if (pr && pr.catch) pr.catch(function () {}); }
+    });
+    Object.keys(UVIDS).forEach(function (k) { if (!keep[k]) { UVIDS[k].remove(); delete UVIDS[k]; } });
+    if (GUIDES) {
+      Array.prototype.slice.call(root.querySelectorAll(".guide,.guide-banner")).forEach(function (g) { g.remove(); });
+      var gb = el("div", "guide-banner", root); gb.textContent = "BOTTOM LAYER (character loops) · scene: " + SCENE;
+      L.slots.forEach(function (s) { var g = el("div", "guide" + (s.w < 300 ? " small" : ""), root); place(g, s.x, s.y, s.w, s.h);
+        g.innerHTML = '<div class="t">' + esc(s.id === "gm" ? "GM" : s.label).toUpperCase() + '</div><div class="c">X ' + Math.round(s.x) + "  Y " + Math.round(s.y) + "<br>" + Math.round(s.w) + " × " + Math.round(s.h) + "</div>"; });
+    }
+    document.documentElement.setAttribute("data-ready", "1");
+  }
+
   function render() {
     if (BUILD == null) BUILD = D.build;
     var L = layout();
+    if (UNDER) { renderUnder(L); return; }
     if (!bg) { buildBackground(L.lines); stage.insertAdjacentHTML("beforeend", SHARED_DEFS); }
     setHoles(L.holes ? L.slots : []);
 

@@ -265,3 +265,6 @@ body { width: 100vw; height: 100vh; }
   background: linear-gradient(90deg, rgba(255,230,170,0), rgba(255,236,190,.55), rgba(255,230,170,0)); animation: cardSweep 1.6s .75s ease-out both; }
 @keyframes cardSweep { from { left: -80%; } to { left: 150%; } }
 .portrait.vid::after { z-index: 3; }
+
+/* bottom OBS layer */
+.under-slot { position: absolute; object-fit: cover; object-position: center 30%; background: #050c22; }

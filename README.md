@@ -13,6 +13,16 @@ A single web page draws every stream screen. The background, gold frames, namepl
 | Intro / starting soon | `index.html?scene=intro` |
 | Short break | `index.html?scene=break` (a 3D collage of campaign art; one photo at a time is plucked out, floats up front with its name, then goes back) |
 
+## The three-layer setup
+
+Each OBS scene is three layers, bottom to top:
+
+1. **Character loops (bottom):** the same URL plus `&layer=under`, for example `index.html?scene=main&layer=under`. This shows only each player's looping idle video, placed exactly where their camera goes. Everything else is transparent.
+2. **Camera feeds (middle):** each player's camera, placed in its window. When a player turns their camera off, their loop shows through.
+3. **Overlay (top):** the normal URL, for example `index.html?scene=main`.
+
+Use the same `scene` (and `focus` for spotlights) on the top and bottom layers so they line up. Both layers pick up changes from the control panel by themselves.
+
 ## For the DM: OBS setup (once)
 
 1. **Add → Browser**. Paste the hosted URL. For testing from a folder, leave *Local file* unticked and paste `file:///F:/path/to/Browser Overlay 2026/index.html?scene=main`. The *Local file* checkbox drops the `?scene=` part.
