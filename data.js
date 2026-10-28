@@ -41,27 +41,32 @@ window.REDITUS = {
     { id: "trey",    name: "Trey",    fullName: "Tredecim Imago",     seat: true,  mode: "cam", ticker: true,
       level: 11, race: "Drow",          cls: "Fighter",   ac: 18, hp: 92,
       stats: { str: 13, dex: 17, con: 15, int: 8, wis: 12, cha: 11 },
-      portrait: "assets/portraits/trey.jpg" },
+      portrait: "assets/portraits/trey.jpg",
+      video: "assets/idle/trey.mp4", art: "assets/idle/trey.jpg" },
 
     { id: "darius",  name: "Darius",  fullName: "Darius Silverstrum", seat: true,  mode: "cam", ticker: true,
       level: 11, race: "Half-Elf",      cls: "Bard",      ac: 18, hp: 70,   // TODO: still the old level 8 numbers — update from Darius's sheet
       stats: { str: 8, dex: 16, con: 16, int: 12, wis: 10, cha: 19 },
-      portrait: "assets/portraits/darius.jpg" },
+      portrait: "assets/portraits/darius.jpg",
+      video: "assets/idle/darius.mp4", art: "assets/idle/darius.jpg" },
 
     { id: "lapadis", name: "Lapadis", fullName: "Lapadis",            seat: true,  mode: "cam", ticker: true,
       level: 10, race: "Satyr",         cls: "Barbarian", ac: 19, hp: 95,
       stats: { str: 21, dex: 20, con: 15, int: 10, wis: 8, cha: 12 },
-      portrait: "assets/portraits/lapadis.jpg" },
+      portrait: "assets/portraits/lapadis.jpg",
+      video: "assets/idle/lapadis.mp4", art: "assets/idle/lapadis.jpg" },
 
     { id: "felix",   name: "Felix",   fullName: "Felix Tinkerspark",  seat: true,  mode: "cam", ticker: true,
       level: 11, race: "Rock Gnome",    cls: "Artificer", ac: 17, hp: 80,
       stats: { str: 12, dex: 14, con: 14, int: 18, wis: 10, cha: 8 },
-      portrait: "assets/portraits/felix.jpg" },
+      portrait: "assets/portraits/felix.jpg",
+      video: "assets/idle/felix.mp4", art: "assets/idle/felix.jpg" },
 
     { id: "jak",     name: "Jak",     fullName: "Jak Nara",           seat: true,  mode: "cam", ticker: true,
       level: 11, race: "Half-Elf",      cls: "Ranger",    ac: 17, hp: 92,
       stats: { str: 8, dex: 18, con: 14, int: 10, wis: 14, cha: 14 },
-      portrait: "assets/portraits/jak.jpg" },
+      portrait: "assets/portraits/jak.jpg",
+      video: "assets/idle/jak.mp4", art: "assets/idle/jak.jpg" },
 
     // Verris is played by the DM, so he has no camera window, but his card is in the scrolling bar
     { id: "verris",  name: "Verris",  fullName: "Verris",             seat: false, mode: "cam", ticker: true,

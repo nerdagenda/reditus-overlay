@@ -197,7 +197,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function renderParty() {
     var root = $("s-party"); root.innerHTML = "";
     var intro = document.createElement("p"); intro.className = "hint";
-    intro.innerHTML = "Order here is the seat order on every screen. <b>Camera window</b> off = no window (like Verris). <b>Show art</b> covers a player's window with their character art when they're off-cam.";
+    intro.innerHTML = "Order here is the seat order on every screen. <b>Camera window</b> off = no window (like Verris). <b>Show art</b> covers a player's window with their character art when they're off-cam, and plays their idle animation if one is set.";
     root.appendChild(intro);
     S.party.forEach(function (p, idx) {
       var c = document.createElement("div"); c.className = "card" + (p.seat === false ? " off" : "");
@@ -234,6 +234,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       var r2 = document.createElement("div"); r2.className = "grid"; r2.style.marginTop = "10px";
       r2.appendChild(field("Portrait image path", p.portrait, function (v) { p.portrait = v; img.src = v; }, { id: "p-" + idx + "-img" }));
       r2.appendChild(field("Off-cam art path (optional)", p.art, function (v) { p.art = v; }, { id: "p-" + idx + "-artimg" }));
+      r2.appendChild(field("Off-cam animation (video path)", p.video, function (v) { p.video = v; }, { id: "p-" + idx + "-video" }));
       c.appendChild(r2);
       root.appendChild(c);
     });

@@ -240,6 +240,7 @@
   }
 
   /* ---------------- frames & nameplates ---------------- */
+  var VIDS = {};
   var NP = { xs: { h: 22, f: 12, minW: 96, pad: 14, k: .04 }, s: { h: 34, f: 17, minW: 148, pad: 22, k: .055 }, m: { h: 44, f: 22, minW: 205, pad: 30, k: .07 }, l: { h: 56, f: 32, minW: 220, pad: 34, k: .085 } };
   function corners(parent, k, which) {
     var C = {
@@ -266,8 +267,22 @@
     place(f, s.x - t, s.y - t, s.w + 2 * t, s.h + 2 * t);
     var mode = s.map ? "cam" : ((s.who && s.who.mode) || "cam");
     if (mode === "art") {
-      var src = (s.who && (s.who.art || s.who.portrait)) || "";
-      var a = el("div", "art", f); place(a, t, t, s.w, s.h); a.style.backgroundImage = "url('" + src + "')";
+      var vid = s.who && s.who.video;
+      if (vid) {
+        // looping idle animation for an off-cam player; reuse the playing element across data refreshes so it never restarts
+        var key = s.id + "|" + vid, vv = VIDS[key];
+        if (!vv) {
+          vv = document.createElement("video"); vv.className = "art"; vv.muted = true; vv.loop = true; vv.autoplay = true; vv.playsInline = true;
+          vv.setAttribute("muted", ""); vv.setAttribute("playsinline", ""); vv.preload = "auto"; vv.src = vid;
+          var poster = s.who.art || s.who.portrait; if (poster) vv.poster = poster;
+          VIDS[key] = vv;
+        }
+        f.appendChild(vv); place(vv, t, t, s.w, s.h); vv.style.objectFit = "cover";
+        var pr = vv.play && vv.play(); if (pr && pr.catch) pr.catch(function () {});
+      } else {
+        var src = (s.who && (s.who.art || s.who.portrait)) || "";
+        var a = el("div", "art", f); place(a, t, t, s.w, s.h); a.style.backgroundImage = "url('" + src + "')";
+      }
     }
     var v = el("div", "vig", f); place(v, t, t, s.w, s.h);
     var vs = s.map ? .35 : .62;
