@@ -407,8 +407,14 @@
       inner.innerHTML = '<div class="cta-text">' + esc(it.m.text) + "</div>";
     } else {
       var p = it.p, st = p.stats || {};
-      var cardVid = p.cardVideo || (p.seat === false ? p.video : "");
-      if (cardVid) face.innerHTML = '<div class="portrait vid"><video src="' + esc(cardVid) + '" muted autoplay loop playsinline></video></div>';
+      var cardVid = p.cardVideo === false ? "" : (p.cardVideo || p.video || "");
+      if (cardVid) {
+        face.innerHTML = '<div class="portrait vid intro"><video src="' + esc(cardVid) + '" muted autoplay loop playsinline' +
+          (p.art ? ' poster="' + esc(p.art) + '"' : '') + '></video><i class="sweep"></i></div>';
+        var pv = face.querySelector(".portrait");
+        // open wide on the waist-up shot, then push in to head and shoulders once the card has landed
+        setTimeout(function () { pv.classList.remove("intro"); }, 900);
+      }
       else face.innerHTML = '<div class="portrait" style="background-image:url(\'' + esc(p.portrait || p.art || "") + '\')"></div>';
       var sub = "Level " + esc(p.level) + " " + esc([p.race, p.cls].filter(Boolean).join(" "));
       var dice = ["str", "dex", "con", "int", "wis", "cha"].map(function (k) {

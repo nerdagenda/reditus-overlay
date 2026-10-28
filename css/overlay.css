@@ -257,4 +257,11 @@ body { width: 100vw; height: 100vh; }
 
 /* animated stat-card portrait (crops the waist-up loop to head and shoulders) */
 .portrait.vid { overflow: hidden; }
-.portrait.vid video { position: absolute; left: 50%; top: 0; height: 175%; transform: translateX(-50%); }
+.portrait.vid video { position: absolute; left: 50%; top: 0; height: 100%; transform-origin: 50% 8%;
+  transform: translateX(-50%) scale(1.75); transition: transform 2.4s cubic-bezier(.33,.0,.2,1), filter 1.6s ease; }
+.portrait.vid.intro video { transform: translateX(-50%) scale(1); filter: brightness(1.25) saturate(1.1); transition: none; }
+.portrait.vid .sweep { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.portrait.vid .sweep::before { content: ""; position: absolute; top: -20%; left: -80%; width: 55%; height: 140%; transform: rotate(18deg);
+  background: linear-gradient(90deg, rgba(255,230,170,0), rgba(255,236,190,.55), rgba(255,230,170,0)); animation: cardSweep 1.6s .75s ease-out both; }
+@keyframes cardSweep { from { left: -80%; } to { left: 150%; } }
+.portrait.vid::after { z-index: 3; }
