@@ -72,7 +72,8 @@ window.REDITUS = {
     { id: "verris",  name: "Verris",  fullName: "Verris",             seat: false, mode: "cam", ticker: true,
       level: 11, race: "Variant Human", cls: "Fighter",   ac: 18, hp: 125,
       stats: { str: 20, dex: 14, con: 20, int: 19, wis: 8, cha: 8 },
-      portrait: "assets/portraits/verris.jpg" },
+      portrait: "assets/portraits/verris.jpg",
+      video: "assets/idle/verris.mp4", art: "assets/idle/verris.jpg" },
   ],
 
   /* ---------- Scrolling title bar ---------- */

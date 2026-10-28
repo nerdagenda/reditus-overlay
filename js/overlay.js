@@ -407,7 +407,9 @@
       inner.innerHTML = '<div class="cta-text">' + esc(it.m.text) + "</div>";
     } else {
       var p = it.p, st = p.stats || {};
-      face.innerHTML = '<div class="portrait" style="background-image:url(\'' + esc(p.portrait || p.art || "") + '\')"></div>';
+      var cardVid = p.cardVideo || (p.seat === false ? p.video : "");
+      if (cardVid) face.innerHTML = '<div class="portrait vid"><video src="' + esc(cardVid) + '" muted autoplay loop playsinline></video></div>';
+      else face.innerHTML = '<div class="portrait" style="background-image:url(\'' + esc(p.portrait || p.art || "") + '\')"></div>';
       var sub = "Level " + esc(p.level) + " " + esc([p.race, p.cls].filter(Boolean).join(" "));
       var dice = ["str", "dex", "con", "int", "wis", "cha"].map(function (k) {
         var sh = STAT_SHAPES[k];
