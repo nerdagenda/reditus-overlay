@@ -24,6 +24,10 @@ A single web page draws every stream screen. The background, gold frames, namepl
 
 ## For Cory: making changes
 
+**Easiest: the control panel** at `https://nerdagenda.github.io/reditus-overlay/control.html`. Edit the party, stats, scrolling-bar messages, episode number and break settings, and watch them in the live preview. Press **Publish to stream** to save them; the stream picks them up about a minute later. The first time you publish it asks for a GitHub key, and the steps are shown right there.
+
+You can also edit the files by hand:
+
 - **Week to week:** edit `data.js` only. You can change the episode number, levels, AC/HP/stats, CTA messages, who's seated, and who's on camera or shown as art. Every open overlay updates within about 4 seconds, with no reload and no OBS refresh.
 - **Player absent or off-cam:** set their `mode: "art"`. Their window is covered with their character art, and the DM doesn't touch anything.
 - **Player added or removed:** add or remove them in `party` (or set `seat: false`). Layouts re-flow automatically. Tell the DM to check `&guides=1` because positions change.

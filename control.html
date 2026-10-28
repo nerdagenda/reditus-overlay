@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Reditus Overlay Control</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Inter+Tight:wght@400;500;600&display=swap">
+<style>
+/* Layout: editor column on the left, sticky live 16:9 preview on the right; stacks on narrow screens. Navy + gold, same world as the stream. */
+:root {
+  --ink: #050c22; --panel: #0b1a40; --panel-2: #0f2152; --line: #243a70;
+  --gold: #e9b979; --gold-hi: #ffe0a3; --text: #e8ecf6; --muted: #95a3c4;
+  --good: #5fd39a; --warn: #f2c14e; --bad: #ff6b6b;
+  --display: "Cinzel", "Times New Roman", serif;
+  --body: "Inter Tight", "Segoe UI", system-ui, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--ink); color: var(--text); font-family: var(--body); font-size: 14px; }
+.top { position: sticky; top: 0; z-index: 20; background: rgba(5,12,34,.96); border-bottom: 1px solid var(--line); backdrop-filter: blur(6px); }
+.top .in { max-width: 1500px; margin: 0 auto; padding: 12px max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left)); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+h1 { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: .06em; color: var(--gold-hi); margin: 0; flex: 1 1 auto; }
+.status { font-size: 13px; color: var(--muted); }
+.status.good { color: var(--good); } .status.warn { color: var(--warn); } .status.bad { color: var(--bad); }
+button, select, input, textarea { font: inherit; color: var(--text); }
+.btn { background: var(--panel-2); border: 1px solid var(--line); padding: 8px 14px; cursor: pointer; }
+.btn:hover { border-color: var(--gold); }
+.btn.primary { background: linear-gradient(180deg, #f3cf8f, #c4894c); color: #1c1205; border-color: #f3cf8f; font-weight: 600; }
+.btn.primary:disabled { opacity: .45; cursor: default; }
+.btn.small { padding: 4px 9px; font-size: 12px; }
+.btn.danger:hover { border-color: var(--bad); color: var(--bad); }
+:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+
+.wrap { max-width: 1500px; margin: 0 auto; padding: 18px max(16px, env(safe-area-inset-right)) 60px max(16px, env(safe-area-inset-left)); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 22px; align-items: start; }
+@media (max-width: 1050px) { .wrap { grid-template-columns: minmax(0, 1fr); } .preview { position: static !important; order: -1; } }
+
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.tabs button { background: var(--panel); border: 1px solid var(--line); padding: 8px 14px; cursor: pointer; text-transform: uppercase; letter-spacing: .05em; font-size: 12px; }
+.tabs button[aria-selected="true"] { border-color: var(--gold); color: var(--gold-hi); background: linear-gradient(180deg, #2a2112, #120d06); }
+section[hidden] { display: none !important; }
+
+.card { background: var(--panel); border: 1px solid var(--line); padding: 14px; margin-bottom: 12px; }
+.card h3 { margin: 0 0 10px; font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: .05em; color: var(--gold-hi); display: flex; align-items: center; gap: 10px; }
+.card h3 .spacer { flex: 1; }
+.card h3 .btn { font-family: var(--body); letter-spacing: 0; }
+.card.off { opacity: .7; }
+.grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+.grid.stats { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 520px) { .grid.stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); min-width: 0; }
+label.f input, label.f select, label.f textarea { background: #071230; border: 1px solid var(--line); padding: 7px 8px; font-size: 14px; text-transform: none; letter-spacing: 0; width: 100%; min-width: 0; }
+label.f input:focus, label.f select:focus, label.f textarea:focus { border-color: var(--gold); outline: none; }
+.stats label.f input { text-align: center; font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 600; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-top: 10px; }
+.chk { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13px; }
+.chk input { accent-color: var(--gold); width: 16px; height: 16px; }
+.portrait { width: 44px; height: 44px; object-fit: cover; border: 1px solid var(--gold); background: #071230; flex: none; }
+.msg { display: grid; grid-template-columns: 130px minmax(0, 1fr) auto; gap: 8px; align-items: end; margin-bottom: 8px; }
+@media (max-width: 560px) { .msg { grid-template-columns: minmax(0, 1fr); } }
+.hint { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 6px 0 0; max-width: 70ch; }
+.hint b { color: var(--text); font-weight: 600; }
+.mods { font-size: 11px; color: var(--muted); text-align: center; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+.preview { position: sticky; top: 74px; }
+.screen { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 20px 50px rgba(0,0,0,.55); }
+.screen iframe { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; }
+.pv-bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
+.pv-bar select { background: var(--panel); border: 1px solid var(--line); padding: 6px 8px; }
+
+.dialog { position: fixed; inset: 0; background: rgba(2,6,18,.78); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+.dialog[hidden] { display: none; }
+.dialog .box { background: var(--panel); border: 1px solid var(--gold); max-width: 560px; width: 100%; padding: 20px; }
+.dialog h2 { font-family: var(--display); color: var(--gold-hi); font-size: 18px; margin: 0 0 10px; }
+.dialog ol { padding-left: 20px; line-height: 1.6; color: var(--text); margin: 8px 0 14px; }
+.dialog a { color: var(--gold-hi); }
+.dialog code { background: #071230; padding: 1px 5px; }
+.dialog .row { justify-content: flex-end; }
+</style>
+</head>
+<body>
+<div class="top"><div class="in">
+  <h1>Reditus Overlay · Control Panel</h1>
+  <span class="status" id="status">Loading…</span>
+  <button class="btn" id="b-revert" type="button">Discard changes</button>
+  <button class="btn primary" id="b-publish" type="button" disabled>Publish to stream</button>
+  <button class="btn small" id="b-token" type="button" title="GitHub access for publishing">GitHub key</button>
+</div></div>
+
+<div class="wrap">
+  <main>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-party" aria-selected="true" data-t="party">Party</button>
+      <button role="tab" id="tab-ticker" aria-selected="false" data-t="ticker">Scrolling bar</button>
+      <button role="tab" id="tab-show" aria-selected="false" data-t="show">Show &amp; GM</button>
+      <button role="tab" id="tab-break" aria-selected="false" data-t="break">Break screen</button>
+    </div>
+    <section id="s-party"></section>
+    <section id="s-ticker" hidden></section>
+    <section id="s-show" hidden></section>
+    <section id="s-break" hidden></section>
+  </main>
+
+  <aside class="preview">
+    <div class="pv-bar">
+      <label>Preview screen
+        <select id="pv-scene">
+          <option value="main">Main party</option><option value="spotlight">Spotlight</option>
+          <option value="map">Battle map</option><option value="gm">GM screen</option>
+          <option value="intro">Intro</option><option value="break">Short break</option>
+        </select>
+      </label>
+      <label id="pv-focus-wrap" hidden>on <select id="pv-focus"></select></label>
+      <label class="chk"><input type="checkbox" id="pv-art" checked> Character art in camera windows</label>
+      <button class="btn small" id="pv-next" type="button">Next bar card ›</button>
+    </div>
+    <div class="screen" id="screen"><iframe id="pv" title="Overlay preview"></iframe></div>
+    <p class="hint">The preview shows your <b>unsaved</b> changes. Nothing reaches the stream until you press <b>Publish to stream</b>; the live overlay updates about a minute later.</p>
+  </aside>
+</div>
+
+<div class="dialog" id="dlg" hidden>
+  <div class="box" role="dialog" aria-labelledby="dlg-h">
+    <h2 id="dlg-h">Connect GitHub (one time)</h2>
+    <p class="hint">Publishing saves <code>data.js</code> into your <b>reditus-overlay</b> repo. That needs a GitHub key, which stays in this browser only.</p>
+    <ol>
+      <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → New fine-grained token</a>.</li>
+      <li>Name it <code>Reditus control panel</code> and set an expiry you're comfortable with.</li>
+      <li>Under <b>Repository access</b> choose <b>Only select repositories</b> → <code>reditus-overlay</code>.</li>
+      <li>Under <b>Permissions → Repository → Contents</b>, choose <b>Read and write</b>.</li>
+      <li>Click <b>Generate token</b>, copy it, and paste it below.</li>
+    </ol>
+    <label class="f">GitHub key <input type="password" id="tok" autocomplete="off" placeholder="github_pat_…"></label>
+    <div class="row">
+      <button class="btn danger small" id="tok-forget" type="button">Forget key</button>
+      <button class="btn" id="tok-cancel" type="button">Cancel</button>
+      <button class="btn primary" id="tok-save" type="button">Save key</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var OWNER = "nerdagenda", REPO = "reditus-overlay", PATH = "data.js", BRANCH = "main";
+  var API = "https://api.github.com/repos/" + OWNER + "/" + REPO + "/contents/" + PATH;
+  var S = null, ORIG = "", SHA = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var LS = { get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: function (k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} } };
+  var token = LS.get("reditus-gh-token") || "";
+
+  function status(t, cls) { var s = $("status"); s.textContent = t; s.className = "status " + (cls || ""); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function parseDataJs(text) { var w = {}; (new Function("window", text))(w); if (!w.REDITUS) throw new Error("data.js has no window.REDITUS"); return w.REDITUS; }
+  function b64decode(b) { return decodeURIComponent(escape(atob(b.replace(/\n/g, "")))); }
+  function b64encode(t) { return btoa(unescape(encodeURIComponent(t))); }
+
+  /* ---------- load ---------- */
+  function load() {
+    status("Loading current overlay data…");
+    var viaApi = token ? fetch(API + "?ref=" + BRANCH + "&t=" + Date.now(), { headers: { Authorization: "Bearer " + token, Accept: "application/vnd.github+json" } })
+      .then(function (r) { if (!r.ok) throw new Error("GitHub said " + r.status); return r.json(); })
+      .then(function (j) { SHA = j.sha; return b64decode(j.content); }) : Promise.reject(new Error("no key"));
+    viaApi.catch(function () { return fetch("data.js?t=" + Date.now()).then(function (r) { return r.text(); }); })
+      .then(function (text) {
+        S = parseDataJs(text); ORIG = JSON.stringify(S);
+        renderAll(); dirty(); pushPreview(true);
+        status(token ? "Loaded the latest saved version." : "Loaded. Add your GitHub key to publish.", token ? "good" : "warn");
+      })
+      .catch(function (e) { status("Couldn't load data.js: " + e.message, "bad"); });
+  }
+
+  /* ---------- helpers for building forms ---------- */
+  function field(label, value, onInput, opts) {
+    opts = opts || {};
+    var l = document.createElement("label"); l.className = "f"; l.textContent = label;
+    var i = document.createElement(opts.type === "textarea" ? "textarea" : opts.options ? "select" : "input");
+    if (opts.options) opts.options.forEach(function (o) { var op = document.createElement("option"); op.value = o[0]; op.textContent = o[1]; i.appendChild(op); });
+    else if (opts.type !== "textarea") i.type = opts.type || "text";
+    if (opts.id) i.id = opts.id;
+    if (opts.min != null) i.min = opts.min; if (opts.max != null) i.max = opts.max;
+    i.value = value == null ? "" : value;
+    i.addEventListener(opts.options ? "change" : "input", function () { onInput(opts.type === "number" ? (i.value === "" ? null : +i.value) : i.value); changed(); });
+    l.appendChild(i); return l;
+  }
+  function check(label, value, onChange, id) {
+    var l = document.createElement("label"); l.className = "chk";
+    var i = document.createElement("input"); i.type = "checkbox"; i.checked = !!value; if (id) i.id = id;
+    i.addEventListener("change", function () { onChange(i.checked); changed(); renderAll(); });
+    l.appendChild(i); l.appendChild(document.createTextNode(label)); return l;
+  }
+  function btn(text, onClick, cls) { var b = document.createElement("button"); b.type = "button"; b.className = "btn small " + (cls || ""); b.textContent = text; b.addEventListener("click", onClick); return b; }
+  function mod(v) { if (v == null || v === "") return ""; var m = Math.floor((v - 10) / 2); return (m >= 0 ? "+" : "") + m; }
+
+  /* ---------- Party ---------- */
+  var STATS = [["str", "STR"], ["dex", "DEX"], ["con", "CON"], ["int", "INT"], ["wis", "WIS"], ["cha", "CHA"]];
+  function renderParty() {
+    var root = $("s-party"); root.innerHTML = "";
+    var intro = document.createElement("p"); intro.className = "hint";
+    intro.innerHTML = "Order here is the seat order on every screen. <b>Camera window</b> off = no window (like Verris). <b>Show art</b> covers a player's window with their character art when they're off-cam.";
+    root.appendChild(intro);
+    S.party.forEach(function (p, idx) {
+      var c = document.createElement("div"); c.className = "card" + (p.seat === false ? " off" : "");
+      var h = document.createElement("h3");
+      var img = document.createElement("img"); img.className = "portrait"; img.alt = ""; img.src = p.portrait || ""; h.appendChild(img);
+      h.appendChild(document.createTextNode(p.fullName || p.name || "New character"));
+      var sp = document.createElement("span"); sp.className = "spacer"; h.appendChild(sp);
+      h.appendChild(btn("▲", function () { if (idx > 0) { S.party.splice(idx - 1, 0, S.party.splice(idx, 1)[0]); changed(); renderAll(); } }));
+      h.appendChild(btn("▼", function () { if (idx < S.party.length - 1) { S.party.splice(idx + 1, 0, S.party.splice(idx, 1)[0]); changed(); renderAll(); } }));
+      h.appendChild(btn("Remove", function () { var ok = c.querySelector(".confirm"); if (ok) { S.party.splice(idx, 1); changed(); renderAll(); } else { var b = this; b.textContent = "Click again to remove"; b.classList.add("confirm"); c.classList.add("confirm"); setTimeout(function () { if (b.isConnected) { b.textContent = "Remove"; c.classList.remove("confirm"); } }, 3000); } }, "danger"));
+      c.appendChild(h);
+      var g = document.createElement("div"); g.className = "grid";
+      g.appendChild(field("Nameplate", p.name, function (v) { p.name = v; }, { id: "p-" + idx + "-name" }));
+      g.appendChild(field("Full name (stat card)", p.fullName, function (v) { p.fullName = v; }, { id: "p-" + idx + "-full" }));
+      g.appendChild(field("Level", p.level, function (v) { p.level = v; }, { type: "number", min: 1, max: 20, id: "p-" + idx + "-lvl" }));
+      g.appendChild(field("Race", p.race, function (v) { p.race = v; }, { id: "p-" + idx + "-race" }));
+      g.appendChild(field("Class", p.cls, function (v) { p.cls = v; }, { id: "p-" + idx + "-cls" }));
+      g.appendChild(field("AC", p.ac, function (v) { p.ac = v; }, { type: "number", min: 0, id: "p-" + idx + "-ac" }));
+      g.appendChild(field("Max HP", p.hp, function (v) { p.hp = v; }, { type: "number", min: 0, id: "p-" + idx + "-hp" }));
+      c.appendChild(g);
+      var st = document.createElement("div"); st.className = "grid stats"; st.style.marginTop = "10px";
+      p.stats = p.stats || {};
+      STATS.forEach(function (k) {
+        var l = field(k[1], p.stats[k[0]], function (v) { p.stats[k[0]] = v; m.textContent = mod(v); }, { type: "number", min: 1, max: 30, id: "p-" + idx + "-" + k[0] });
+        var m = document.createElement("div"); m.className = "mods"; m.textContent = mod(p.stats[k[0]]); l.appendChild(m);
+        st.appendChild(l);
+      });
+      c.appendChild(st);
+      var r = document.createElement("div"); r.className = "row";
+      r.appendChild(check("Camera window", p.seat !== false, function (v) { p.seat = v; }, "p-" + idx + "-seat"));
+      r.appendChild(check("Show art (player off-cam)", p.mode === "art", function (v) { p.mode = v ? "art" : "cam"; }, "p-" + idx + "-art"));
+      r.appendChild(check("Card in scrolling bar", p.ticker !== false, function (v) { p.ticker = v; }, "p-" + idx + "-tick"));
+      c.appendChild(r);
+      var r2 = document.createElement("div"); r2.className = "grid"; r2.style.marginTop = "10px";
+      r2.appendChild(field("Portrait image path", p.portrait, function (v) { p.portrait = v; img.src = v; }, { id: "p-" + idx + "-img" }));
+      r2.appendChild(field("Off-cam art path (optional)", p.art, function (v) { p.art = v; }, { id: "p-" + idx + "-artimg" }));
+      c.appendChild(r2);
+      root.appendChild(c);
+    });
+    var add = btn("+ Add character", function () {
+      var n = S.party.length + 1;
+      S.party.push({ id: "char" + Date.now().toString(36), name: "New", fullName: "New Character", seat: true, mode: "cam", ticker: true, level: 1, race: "", cls: "", ac: 10, hp: 10, stats: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, portrait: "" });
+      changed(); renderAll();
+    });
+    add.classList.remove("small"); root.appendChild(add);
+  }
+
+  /* ---------- Scrolling bar ---------- */
+  var ICONS = [["emblem", "D&D emblem"], ["like", "Thumbs up"], ["comment", "Comment"], ["heart", "Heart"], ["bell", "Bell"]];
+  function renderTicker() {
+    var t = S.ticker = S.ticker || {}; t.messages = t.messages || [];
+    var root = $("s-ticker"); root.innerHTML = "";
+    var c = document.createElement("div"); c.className = "card";
+    c.innerHTML = "<h3>Timing</h3>";
+    var g = document.createElement("div"); g.className = "grid";
+    g.appendChild(field("Character card (seconds)", t.seconds, function (v) { t.seconds = v; }, { type: "number", min: 4, id: "t-sec" }));
+    g.appendChild(field("Message (seconds)", t.messageSeconds, function (v) { t.messageSeconds = v; }, { type: "number", min: 4, id: "t-msec" }));
+    g.appendChild(field("Order", t.pattern || "mix", function (v) { t.pattern = v; }, { id: "t-pattern", options: [["mix", "Message, then a few characters"], ["alternate", "Message, character, message…"], ["party-then-messages", "All characters, then messages"], ["messages-then-party", "All messages, then characters"]] }));
+    g.appendChild(field("Characters between messages", t.charactersBetween, function (v) { t.charactersBetween = v; }, { type: "number", min: 1, id: "t-between" }));
+    c.appendChild(g); root.appendChild(c);
+
+    var m = document.createElement("div"); m.className = "card";
+    m.innerHTML = "<h3>Messages</h3>";
+    t.messages.forEach(function (msg, i) {
+      var row = document.createElement("div"); row.className = "msg";
+      var known = ICONS.some(function (x) { return x[0] === msg.icon; });
+      row.appendChild(field("Icon", known ? msg.icon : "emblem", function (v) { msg.icon = v; }, { id: "m-" + i + "-icon", options: ICONS }));
+      row.appendChild(field("Text", msg.text, function (v) { msg.text = v; }, { id: "m-" + i + "-text" }));
+      var b = document.createElement("div"); b.style.display = "flex"; b.style.gap = "4px";
+      b.appendChild(btn("▲", function () { if (i > 0) { t.messages.splice(i - 1, 0, t.messages.splice(i, 1)[0]); changed(); renderAll(); } }));
+      b.appendChild(btn("▼", function () { if (i < t.messages.length - 1) { t.messages.splice(i + 1, 0, t.messages.splice(i, 1)[0]); changed(); renderAll(); } }));
+      b.appendChild(btn("✕", function () { t.messages.splice(i, 1); changed(); renderAll(); }, "danger"));
+      row.appendChild(b); m.appendChild(row);
+    });
+    m.appendChild(btn("+ Add message", function () { t.messages.push({ icon: "emblem", text: "New message" }); changed(); renderAll(); }));
+    root.appendChild(m);
+  }
+
+  /* ---------- Show & GM ---------- */
+  function renderShow() {
+    var root = $("s-show"); root.innerHTML = "";
+    S.show = S.show || {}; S.gm = S.gm || {};
+    var c = document.createElement("div"); c.className = "card"; c.innerHTML = "<h3>Show</h3>";
+    var g = document.createElement("div"); g.className = "grid";
+    g.appendChild(field("Episode number", S.show.episode, function (v) { S.show.episode = v; }, { type: "number", min: 1, id: "s-ep" }));
+    g.appendChild(field("Schedule", S.show.schedule, function (v) { S.show.schedule = v; }, { id: "s-sched" }));
+    g.appendChild(field("Intro screen line (optional)", S.show.introText, function (v) { S.show.introText = v; }, { id: "s-intro" }));
+    c.appendChild(g); root.appendChild(c);
+    var d = document.createElement("div"); d.className = "card"; d.innerHTML = "<h3>Grand Master</h3>";
+    var g2 = document.createElement("div"); g2.className = "grid";
+    g2.appendChild(field("Nameplate", S.gm.label, function (v) { S.gm.label = v; }, { id: "g-label" }));
+    g2.appendChild(field("Off-cam art path (optional)", S.gm.art, function (v) { S.gm.art = v; }, { id: "g-art" }));
+    d.appendChild(g2);
+    var r = document.createElement("div"); r.className = "row";
+    r.appendChild(check("Show art instead of the GM camera", S.gm.mode === "art", function (v) { S.gm.mode = v ? "art" : "cam"; }, "g-mode"));
+    d.appendChild(r); root.appendChild(d);
+  }
+
+  /* ---------- Break ---------- */
+  function renderBreak() {
+    var B = S.breakScreen = S.breakScreen || {};
+    var root = $("s-break"); root.innerHTML = "";
+    var c = document.createElement("div"); c.className = "card"; c.innerHTML = "<h3>Short break screen</h3>";
+    var g = document.createElement("div"); g.className = "grid";
+    g.appendChild(field("Banner text", B.text, function (v) { B.text = v; }, { id: "b-text" }));
+    g.appendChild(field("Seconds per photo", B.seconds, function (v) { B.seconds = v; }, { type: "number", min: 3, id: "b-sec" }));
+    g.appendChild(field("Photos on screen", B.collageSize, function (v) { B.collageSize = v; }, { type: "number", min: 8, id: "b-size" }));
+    g.appendChild(field("Plucks before a new set", B.plucksPerSet, function (v) { B.plucksPerSet = v; }, { type: "number", min: 2, id: "b-per" }));
+    c.appendChild(g);
+    var r = document.createElement("div"); r.className = "row";
+    r.appendChild(check("Use the Discord art", B.useDiscordArt !== false, function (v) { B.useDiscordArt = v; }, "b-discord"));
+    c.appendChild(r);
+    var hint = document.createElement("p"); hint.className = "hint";
+    hint.innerHTML = "Image names and captions live in <b>break-images.js</b> in the repo. Ask Claude to add, rename or remove art.";
+    c.appendChild(hint);
+    root.appendChild(c);
+  }
+
+  function renderAll() {
+    if (!S) return;
+    renderParty(); renderTicker(); renderShow(); renderBreak();
+    var f = $("pv-focus"), cur = f.value;
+    f.innerHTML = S.party.filter(function (p) { return p.seat !== false; }).map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; }).join("");
+    if (cur) f.value = cur;
+  }
+
+  /* ---------- tabs ---------- */
+  document.querySelectorAll(".tabs button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".tabs button").forEach(function (x) { x.setAttribute("aria-selected", x === b ? "true" : "false"); });
+      ["party", "ticker", "show", "break"].forEach(function (t) { $("s-" + t).hidden = t !== b.dataset.t; });
+    });
+  });
+
+  /* ---------- preview ---------- */
+  var pv = $("pv"), screen = $("screen");
+  function fit() { pv.style.transform = "scale(" + (screen.clientWidth / 1920) + ")"; }
+  addEventListener("resize", fit); if ("ResizeObserver" in window) new ResizeObserver(fit).observe(screen); fit();
+  function pvUrl() {
+    var sc = $("pv-scene").value, u = "index.html?scene=" + sc;
+    if (sc === "spotlight") u += "&focus=" + encodeURIComponent($("pv-focus").value || "");
+    if ($("pv-art").checked) u += "&preview=1";
+    return u;
+  }
+  function reloadPreview() { $("pv-focus-wrap").hidden = $("pv-scene").value !== "spotlight"; pv.src = pvUrl(); }
+  pv.addEventListener("load", function () { pushPreview(true); });
+  var pvTimer = null;
+  function pushPreview(now) {
+    clearTimeout(pvTimer);
+    pvTimer = setTimeout(function () { try { if (S) pv.contentWindow.postMessage({ type: "reditus:data", data: JSON.parse(JSON.stringify(S)) }, "*"); } catch (e) {} }, now ? 200 : 350);
+  }
+  ["pv-scene", "pv-focus", "pv-art"].forEach(function (id) { $(id).addEventListener("change", reloadPreview); });
+  $("pv-next").addEventListener("click", function () { try { pv.contentWindow.postMessage("reditus:next", "*"); } catch (e) {} });
+
+  /* ---------- dirty state ---------- */
+  function isDirty() { return S && JSON.stringify(S) !== ORIG; }
+  function dirty() { $("b-publish").disabled = !isDirty(); }
+  function changed() { dirty(); pushPreview(); if (isDirty()) status("Unsaved changes. Preview only.", "warn"); }
+  addEventListener("beforeunload", function (e) { if (isDirty()) { e.preventDefault(); e.returnValue = ""; } });
+  $("b-revert").addEventListener("click", function () { if (!ORIG) return; S = JSON.parse(ORIG); renderAll(); dirty(); pushPreview(true); status("Changes discarded.", ""); });
+
+  /* ---------- write data.js ---------- */
+  function toDataJs(d) {
+    d = JSON.parse(JSON.stringify(d));
+    return "/* ==========================================================================\n" +
+      "   THE REDITUS CAMPAIGN — LIVE OVERLAY DATA\n" +
+      "   Saved from the control panel (control.html) on " + new Date().toLocaleString() + ".\n" +
+      "   You can still edit this by hand; the control panel will read it back.\n" +
+      "   Bump `build` only when the overlay CODE changes (forces a full reload).\n" +
+      "   ========================================================================== */\n\n" +
+      "window.REDITUS = " + JSON.stringify(d, null, 2) + ";\n";
+  }
+
+  /* ---------- publish ---------- */
+  function publish() {
+    if (!token) { openDlg(); return; }
+    $("b-publish").disabled = true; status("Publishing…");
+    var getSha = SHA ? Promise.resolve(SHA) : fetch(API + "?ref=" + BRANCH, { headers: { Authorization: "Bearer " + token } }).then(function (r) { return r.json(); }).then(function (j) { return j.sha; });
+    getSha.then(function (sha) { return put(sha); })
+      .then(function (r) {
+        if (r.status === 409 || r.status === 422) { // someone else saved in between: refresh the sha and try once more
+          return fetch(API + "?ref=" + BRANCH + "&t=" + Date.now(), { headers: { Authorization: "Bearer " + token } }).then(function (x) { return x.json(); }).then(function (j) { return put(j.sha); });
+        }
+        return r;
+      })
+      .then(function (r) {
+        if (r.status === 401 || r.status === 403) throw new Error("GitHub refused the key (" + r.status + "). Check it has Contents: Read and write on reditus-overlay.");
+        if (!r.ok) return r.text().then(function (t) { throw new Error("GitHub error " + r.status + ": " + t.slice(0, 160)); });
+        return r.json();
+      })
+      .then(function (j) {
+        SHA = j.content && j.content.sha; ORIG = JSON.stringify(S); dirty();
+        status("Published. The stream updates in about a minute.", "good");
+      })
+      .catch(function (e) { dirty(); status(e.message, "bad"); });
+  }
+  function put(sha) {
+    var summary = "Update overlay data from the control panel";
+    return fetch(API, {
+      method: "PUT",
+      headers: { Authorization: "Bearer " + token, Accept: "application/vnd.github+json", "Content-Type": "application/json" },
+      body: JSON.stringify({ message: summary, content: b64encode(toDataJs(S)), sha: sha, branch: BRANCH })
+    });
+  }
+  $("b-publish").addEventListener("click", publish);
+
+  /* ---------- key dialog ---------- */
+  function openDlg() { $("tok").value = token; $("dlg").hidden = false; $("tok").focus(); }
+  function closeDlg() { $("dlg").hidden = true; }
+  $("b-token").addEventListener("click", openDlg);
+  $("tok-cancel").addEventListener("click", closeDlg);
+  $("tok-save").addEventListener("click", function () { token = $("tok").value.trim(); LS.set("reditus-gh-token", token || null); closeDlg(); status(token ? "Key saved in this browser." : "No key saved.", token ? "good" : "warn"); if (token && !isDirty()) load(); });
+  $("tok-forget").addEventListener("click", function () { token = ""; LS.set("reditus-gh-token", null); $("tok").value = ""; closeDlg(); status("Key removed from this browser.", "warn"); });
+  addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("dlg").hidden) closeDlg(); });
+
+  reloadPreview(); load();
+})();
+</script>
+</body>
+</html>

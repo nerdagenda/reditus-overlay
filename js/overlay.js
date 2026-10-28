@@ -41,7 +41,9 @@
     s.onerror = function () { s.remove(); };
     document.head.appendChild(s);
   }
+  var LOCAL_PREVIEW = false;   // set when the control panel is driving this page with unsaved data
   function poll() {
+    if (LOCAL_PREVIEW) return;
     loadData(function (d) {
       if (!d) return;
       if (BUILD != null && d.build !== BUILD) { location.reload(); return; }
@@ -687,6 +689,12 @@
   // the preview page can ask for the next card ("Next card" button)
   addEventListener("message", function (e) {
     if (e.data === "reditus:next" && tk.root) { clearTimeout(tk.timer); tk.idx++; showTicker(false); }
+    // live preview from the control panel (unsaved changes)
+    if (e.data && e.data.type === "reditus:data" && e.data.data) {
+      LOCAL_PREVIEW = true; D = e.data.data; lastSig = JSON.stringify(D);
+      if (BUILD == null) BUILD = D.build;
+      render();
+    }
   });
 
   /* ---------------- go ---------------- */
