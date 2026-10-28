@@ -656,7 +656,7 @@
     var root = document.getElementById("under") || el("div", "", stage); root.id = "under";
     var keep = {};
     L.slots.forEach(function (s) {
-      if (s.map || !s.who) return;
+      if (s.map || !s.who || s.who.underHidden) return;
       var src = s.who.video, still = s.who.art || s.who.portrait;
       if (!src && !still) return;
       var key = s.id + "|" + (src || still); keep[key] = 1;

@@ -64,7 +64,8 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
 .preview { position: sticky; top: 74px; }
 .screen { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; overflow: hidden; box-shadow: 0 0 0 1px var(--line), 0 20px 50px rgba(0,0,0,.55); }
-.screen iframe { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; }
+.screen iframe[hidden] { display: none; }
+.screen iframe { color-scheme: light; background: transparent; position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; border: 0; transform-origin: 0 0; }
 .pv-bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
 .pv-bar select { background: var(--panel); border: 1px solid var(--line); padding: 6px 8px; }
 
@@ -111,10 +112,10 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
         </select>
       </label>
       <label id="pv-focus-wrap" hidden>on <select id="pv-focus"></select></label>
-      <label class="chk"><input type="checkbox" id="pv-art" checked> Character art in camera windows</label>
+      <label class="chk"><input type="checkbox" id="pv-art" checked> Show bottom layer (loops under cameras)</label>
       <button class="btn small" id="pv-next" type="button">Next bar card ›</button>
     </div>
-    <div class="screen" id="screen"><iframe id="pv" title="Overlay preview"></iframe></div>
+    <div class="screen" id="screen"><iframe id="pvu" title="Bottom layer preview"></iframe><iframe id="pv" title="Overlay preview"></iframe></div>
     <p class="hint">The preview shows your <b>unsaved</b> changes. Nothing reaches the stream until you press <b>Publish to stream</b>; the live overlay updates about a minute later.</p>
   </aside>
 </div>
@@ -197,7 +198,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function renderParty() {
     var root = $("s-party"); root.innerHTML = "";
     var intro = document.createElement("p"); intro.className = "hint";
-    intro.innerHTML = "Order here is the seat order on every screen. <b>Camera window</b> off = no window (like Verris). <b>Show art</b> covers a player's window with their character art when they're off-cam, and plays their idle animation if one is set.";
+    intro.innerHTML = "Order here is the seat order on every screen. <b>Camera window</b> off = no window (like Verris). Each player's idle loop always plays on the <b>bottom layer</b>, under their camera, so it shows whenever their camera is off. <b>Transparent bottom loop</b> hides it. <b>Cover camera with loop</b> puts the loop on the top layer, over their camera, to cover it remotely.";
     root.appendChild(intro);
     S.party.forEach(function (p, idx) {
       var c = document.createElement("div"); c.className = "card" + (p.seat === false ? " off" : "");
@@ -228,7 +229,8 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       c.appendChild(st);
       var r = document.createElement("div"); r.className = "row";
       r.appendChild(check("Camera window", p.seat !== false, function (v) { p.seat = v; }, "p-" + idx + "-seat"));
-      r.appendChild(check("Show art (player off-cam)", p.mode === "art", function (v) { p.mode = v ? "art" : "cam"; }, "p-" + idx + "-art"));
+      r.appendChild(check("Transparent bottom loop", !!p.underHidden, function (v) { p.underHidden = v; }, "p-" + idx + "-under"));
+      r.appendChild(check("Cover camera with loop (top layer)", p.mode === "art", function (v) { p.mode = v ? "art" : "cam"; }, "p-" + idx + "-art"));
       r.appendChild(check("Card in scrolling bar", p.ticker !== false, function (v) { p.ticker = v; }, "p-" + idx + "-tick"));
       c.appendChild(r);
       var r2 = document.createElement("div"); r2.className = "grid"; r2.style.marginTop = "10px";
@@ -334,21 +336,27 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   });
 
   /* ---------- preview ---------- */
-  var pv = $("pv"), screen = $("screen");
-  function fit() { pv.style.transform = "scale(" + (screen.clientWidth / 1920) + ")"; }
+  var pv = $("pv"), pvu = $("pvu"), screen = $("screen");
+  function fit() { var t = "scale(" + (screen.clientWidth / 1920) + ")"; pv.style.transform = t; pvu.style.transform = t; }
   addEventListener("resize", fit); if ("ResizeObserver" in window) new ResizeObserver(fit).observe(screen); fit();
   function pvUrl() {
     var sc = $("pv-scene").value, u = "index.html?scene=" + sc;
     if (sc === "spotlight") u += "&focus=" + encodeURIComponent($("pv-focus").value || "");
-    if ($("pv-art").checked) u += "&preview=1";
     return u;
   }
-  function reloadPreview() { $("pv-focus-wrap").hidden = $("pv-scene").value !== "spotlight"; pv.src = pvUrl(); }
+  function reloadPreview() {
+    $("pv-focus-wrap").hidden = $("pv-scene").value !== "spotlight";
+    pv.src = pvUrl();
+    pvu.hidden = !$("pv-art").checked;
+    if (!pvu.hidden) pvu.src = pvUrl() + "&layer=under";
+  }
   pv.addEventListener("load", function () { pushPreview(true); });
+  pvu.addEventListener("load", function () { pushPreview(true); });
   var pvTimer = null;
   function pushPreview(now) {
     clearTimeout(pvTimer);
-    pvTimer = setTimeout(function () { try { if (S) pv.contentWindow.postMessage({ type: "reditus:data", data: JSON.parse(JSON.stringify(S)) }, "*"); } catch (e) {} }, now ? 200 : 350);
+    pvTimer = setTimeout(function () { if (!S) return; var msg = { type: "reditus:data", data: JSON.parse(JSON.stringify(S)) };
+      [pv, pvu].forEach(function (f) { try { if (!f.hidden && f.contentWindow) f.contentWindow.postMessage(msg, "*"); } catch (e) {} }); }, now ? 200 : 350);
   }
   ["pv-scene", "pv-focus", "pv-art"].forEach(function (id) { $(id).addEventListener("change", reloadPreview); });
   $("pv-next").addEventListener("click", function () { try { pv.contentWindow.postMessage("reditus:next", "*"); } catch (e) {} });
