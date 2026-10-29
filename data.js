@@ -38,8 +38,8 @@ window.REDITUS = {
         "cha": 11
       },
       "portrait": "assets/portraits/trey.jpg",
-      "video": "assets/idle/trey.mp4",
-      "art": "assets/idle/trey.jpg"
+      "video": "assets/idle/trey.mp4?v=30",
+      "art": "assets/idle/trey.jpg?v=30"
     },
     {
       "id": "darius",
@@ -62,8 +62,8 @@ window.REDITUS = {
         "cha": 19
       },
       "portrait": "assets/portraits/darius.jpg",
-      "video": "assets/idle/darius.mp4",
-      "art": "assets/idle/darius.jpg"
+      "video": "assets/idle/darius.mp4?v=30",
+      "art": "assets/idle/darius.jpg?v=30"
     },
     {
       "id": "lapadis",
@@ -86,8 +86,8 @@ window.REDITUS = {
         "cha": 12
       },
       "portrait": "assets/portraits/lapadis.jpg",
-      "video": "assets/idle/lapadis.mp4",
-      "art": "assets/idle/lapadis.jpg"
+      "video": "assets/idle/lapadis.mp4?v=30",
+      "art": "assets/idle/lapadis.jpg?v=30"
     },
     {
       "id": "felix",
@@ -110,8 +110,8 @@ window.REDITUS = {
         "cha": 8
       },
       "portrait": "assets/portraits/felix.jpg",
-      "video": "assets/idle/felix.mp4",
-      "art": "assets/idle/felix.jpg"
+      "video": "assets/idle/felix.mp4?v=30",
+      "art": "assets/idle/felix.jpg?v=30"
     },
     {
       "id": "jak",
@@ -134,8 +134,8 @@ window.REDITUS = {
         "cha": 14
       },
       "portrait": "assets/portraits/jak.jpg",
-      "video": "assets/idle/jak.mp4",
-      "art": "assets/idle/jak.jpg"
+      "video": "assets/idle/jak.mp4?v=30",
+      "art": "assets/idle/jak.jpg?v=30"
     },
     {
       "id": "verris",
@@ -158,8 +158,8 @@ window.REDITUS = {
         "cha": 8
       },
       "portrait": "assets/portraits/verris.jpg",
-      "video": "assets/idle/verris.mp4",
-      "art": "assets/idle/verris.jpg"
+      "video": "assets/idle/verris.mp4?v=30",
+      "art": "assets/idle/verris.jpg?v=30"
     }
   ],
   "ticker": {
