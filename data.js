@@ -1,6 +1,6 @@
 /* ==========================================================================
    THE REDITUS CAMPAIGN — LIVE OVERLAY DATA
-   Saved from the control panel (control.html) on 10/28/2026, 10:36:19 PM.
+   Saved from the control panel (control.html) on 10/28/2026, 10:37:02 PM.
    You can still edit this by hand; the control panel will read it back.
    Bump `build` only when the overlay CODE changes (forces a full reload).
    ========================================================================== */
@@ -168,8 +168,8 @@ window.REDITUS = {
       "seat": true,
       "mode": "cam",
       "ticker": false,
-      "level": 8,
-      "race": "Arcane Restorer",
+      "level": 11,
+      "race": "Automaton",
       "cls": "Cleric",
       "ac": 19,
       "hp": 67,
