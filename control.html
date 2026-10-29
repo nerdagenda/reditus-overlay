@@ -426,7 +426,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     "Class": "Shown on the stat card. Comes from D&D Beyond when a sheet is linked.",
     "AC": "Armour Class badge on the stat card. Calculated from D&D Beyond when linked, so double-check it.",
     "Max HP": "Heart badge on the stat card, and the max for the HP bar when there's no sheet.",
-    "Camera window": "Untick for someone who isn't on camera (e.g. a DM-played character). Their window disappears and the layout re-flows.",
+    "Camera window": "Untick for someone who isn't on camera (e.g. a DM-played character). Their window disappears, the layout re-flows, and they drop off the Live party list.",
     "Transparent bottom loop": "Tick to stop this character's idle animation playing under their camera.",
     "Cover camera with loop (top layer)": "Covers this player's camera with their animated character, e.g. when they step away. Needs Publish (about a minute).",
     "Card in scrolling bar": "Show this character's stat card in the scrolling bar at the bottom.",
@@ -552,7 +552,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       });
       c.appendChild(st);
       var r = document.createElement("div"); r.className = "row";
-      r.appendChild(check("Camera window", p.seat !== false, function (v) { p.seat = v; }, "p-" + idx + "-seat"));
+      r.appendChild(check("Camera window", p.seat !== false, function (v) { p.seat = v; c.classList.toggle("off", !v); renderBattle(); paintBattle(); }, "p-" + idx + "-seat"));
       r.appendChild(check("Transparent bottom loop", !!p.underHidden, function (v) { p.underHidden = v; }, "p-" + idx + "-under"));
       r.appendChild(check("Cover camera with loop (top layer)", p.mode === "art", function (v) { p.mode = v ? "art" : "cam"; }, "p-" + idx + "-art"));
       r.appendChild(check("Card in scrolling bar", p.ticker !== false, function (v) { p.ticker = v; }, "p-" + idx + "-tick"));
@@ -822,7 +822,8 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   var openPick = {};   // which characters have the condition picker open
   function renderBattle() {
     var root = $("live-party"); if (!root) return; root.innerHTML = "";
-    S.party.forEach(function (p) {
+    // only characters with a camera window on (Setup → Party → Camera window); Verris-style NPCs stay off this list
+    S.party.filter(function (p) { return p.seat !== false; }).forEach(function (p) {
       var c = document.createElement("div"); c.className = "lpc"; c.setAttribute("data-pid", p.id);
       c.innerHTML = '<div class="lph"><img alt="" src="' + esc(p.portrait || "") + '"><div class="nm"><b title="' + esc(p.fullName || p.name) + '">' + esc(p.name || p.fullName) + '</b><small class="src"></small></div>' +
         '<div class="hpnum"><span class="cur">–</span><small> / <span class="max">–</span></small> <span class="tmp"></span></div></div>' +
