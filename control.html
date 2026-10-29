@@ -498,6 +498,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
   /* ---------- tooltips: every Setup field with a ? explains itself ---------- */
   var TIPS = {
+    "Show HP numbers on the bars": "On: the bar shows “60 / 92”. Off: just the coloured bar, no numbers. Either way the frame pulses red when someone is under 15% HP.",
     "YouTube channel (live preview)": "The channel Live mode watches. A UC… channel id or an @handle. When it goes live, a muted preview of the stream pops up in Live mode.",
     "YouTube preview in Live mode": "Untick to hide the YouTube preview and stop checking whether the channel is live.",
     "Nameplate": "Short name shown under this player's camera window, e.g. Trey. Also used to find their OBS camera (\u201cTrey Cam\u201d).",
@@ -788,6 +789,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     e.appendChild(g3);
     var r3 = document.createElement("div"); r3.className = "row";
     r3.appendChild(check("Show HP bars on the camera windows", R.bars !== false, function (v) { R.bars = v; }, "h-bars"));
+    r3.appendChild(check("Show HP numbers on the bars", R.numbers !== false, function (v) { R.numbers = v; }, "h-nums"));
     var out = document.createElement("pre"); out.className = "hint"; out.id = "h-out"; out.style.whiteSpace = "pre-wrap"; out.style.margin = "10px 0 0";
     r3.appendChild(btn("Test relay", function () {
       var ids = (S.party || []).map(function (p) { var m = String(p.ddb || "").match(/(\d{3,12})\s*\/?\s*$/) || String(p.ddb || "").match(/characters\/(\d+)/); return m ? [p.name, m[1]] : null; }).filter(Boolean);

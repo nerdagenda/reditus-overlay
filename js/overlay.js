@@ -329,7 +329,7 @@
       var cx = s.x + s.w / 2, cy = s.npPos === "top" ? s.y - t / 2 : s.y + s.h + t / 2;
       var npSize = s.w < 260 ? "xs" : z.np;
       nameplate(parent, s.label, cx, cy, npSize);
-      if (s.id !== "gm" && s.npPos !== "top" && s.who) hpBar(parent, s, cy - (NP[npSize] || NP.s).h / 2);
+      if (s.id !== "gm" && s.npPos !== "top" && s.who) hpBar(parent, s, cy - (NP[npSize] || NP.s).h / 2, f);
     }
     return f;
   }
@@ -374,14 +374,15 @@
     return list;
   }
   function hpEligible(p) { return !!(p && (MANUAL[p.id] || ddbId(p))); }
-  function hpBar(parent, s, npTop) {
+  function hpBar(parent, s, npTop, frameEl) {
     if (!hpOn() || !hpEligible(s.who)) return;
     var big = s.w >= 380;
     var bw = Math.min(s.w * (big ? .58 : .66), 420), bh = big ? 16 : 12;
     var b = el("div", "hpbar" + (big ? " big" : ""), parent);
     place(b, s.x + (s.w - bw) / 2, npTop - bh - (big ? 12 : 8), bw, bh);
     b.innerHTML = '<div class="trk"><i class="lag"></i><i class="fill"></i><i class="tmp"></i></div><div class="num"></div><div class="ds"></div>';
-    b._p = s.who; HPBARS.push(b);
+    b._p = s.who; b._frame = frameEl; HPBARS.push(b);
+    if (hpCfg().numbers === false) b.classList.add("nonum");   // Setup → "Show HP numbers on the bars" off: just the bar
     drawBar(b, false);
   }
   function drawBar(b, animate) {
@@ -399,6 +400,8 @@
     b.querySelector(".num").textContent = cur + (tmp ? " +" + tmp : "") + " / " + max;
     b.classList.toggle("low", cur > 0 && pct <= .25);
     b.classList.toggle("down", cur === 0);
+    // under 15%: slow red distress pulse on the character's camera frame
+    if (b._frame) b._frame.classList.toggle("distress", pct < .15);
     var ds = h.deathSaves || {}, sc = Math.min(3, ds.success || 0), fc = Math.min(3, ds.fail || 0);
     b.querySelector(".ds").innerHTML = cur === 0 && !ds.stable && (sc || fc)
       ? '<span class="s">' + "●".repeat(sc) + "○".repeat(3 - sc) + '</span><span class="f">' + "●".repeat(fc) + "○".repeat(3 - fc) + "</span>" : "";

@@ -278,6 +278,13 @@ body { width: 100vw; height: 100vh; }
 /* ---------- live HP bars (D&D Beyond relay) ---------- */
 .hpbar { position: absolute; z-index: 4; transition: opacity .6s; }
 .hpbar.nodata { opacity: 0; }
+.hpbar.nonum .num { display: none; }
+/* low HP (under 15%): a slow red distress pulse round the camera frame */
+.frame.distress .edge { animation: hpdistress 2.6s ease-in-out infinite; }
+.frame.distress .vig { animation: hpdistressin 2.6s ease-in-out infinite; }
+@keyframes hpdistress { 0%, 100% { box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 6px 24px rgba(0,0,0,.55), 0 0 0 0 rgba(255, 40, 40, 0), 0 0 0 0 rgba(200, 0, 0, 0); }
+  50% { box-shadow: 0 0 0 1px rgba(0,0,0,.35), 0 6px 24px rgba(0,0,0,.55), 0 0 18px 4px rgba(255, 36, 36, .8), 0 0 42px 10px rgba(200, 0, 0, .45); } }
+@keyframes hpdistressin { 0%, 100% { box-shadow: inset 0 0 0 0 rgba(255, 30, 30, 0); } 50% { box-shadow: inset 0 0 60px 10px rgba(255, 30, 30, .45); } }
 .hpbar .trk { position: absolute; inset: 0; border-radius: 3px; overflow: hidden;
   background: linear-gradient(180deg, #120408, #2a0a10); box-shadow: 0 0 0 1.5px #c9a063, 0 0 0 3px rgba(5, 8, 20, .85), 0 3px 10px rgba(0, 0, 0, .6); }
 .hpbar .trk i { position: absolute; top: 0; bottom: 0; left: 0; }
