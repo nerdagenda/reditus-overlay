@@ -228,5 +228,10 @@ window.REDITUS = {
     "gm": {},
     "intro": {},
     "break": {}
+  },
+  "hpRelay": {
+    "url": "https://reditus-hp.cory-b7e.workers.dev",
+    "seconds": 4,
+    "bars": true
   }
 };
