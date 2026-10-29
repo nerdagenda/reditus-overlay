@@ -45,6 +45,15 @@ button, select, input, textarea { font: inherit; color: var(--text); }
 .hpbtns { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: flex-end; }
 .hpbtns input { width: 58px; }
 .hpbtns .btn.dmg { color: #ff8a80; } .hpbtns .btn.heal { color: #8fe08f; }
+.conds { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+.cchip { --cc: #e9b979; display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px 3px 4px; font: inherit; font-size: 12px; color: var(--muted);
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 14px; cursor: pointer; }
+.cchip svg { width: 18px; height: 18px; color: var(--cc); opacity: .55; }
+.cchip:hover { border-color: var(--cc); color: var(--text); }
+.cchip[aria-pressed="true"] { background: color-mix(in srgb, var(--cc) 22%, #0b1a40); border-color: var(--cc); color: #fff; box-shadow: 0 0 8px color-mix(in srgb, var(--cc) 45%, transparent); }
+.cchip[aria-pressed="true"] svg { opacity: 1; }
+.cchip.sheet { border-style: dashed; cursor: default; }
+.cchip:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 .btn.danger:hover { border-color: var(--bad); color: var(--bad); }
 :focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 
@@ -160,6 +169,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   </div>
 </div>
 
+<script src="js/conditions.js"></script>
 <script>
 (function () {
   "use strict";
@@ -415,7 +425,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
   /* ---------- Battle / HP (talks to the relay directly: changes show on stream within seconds, no Publish needed) ---------- */
   var hpKey = LS.get("reditus-hp-key") || "";
-  var LIVE = { chars: {}, manual: {}, battle: null, mapBars: true }, hpPending = {}, hpSendTimer = null, hpErr = "";
+  var LIVE = { chars: {}, manual: {}, battle: null, mapBars: true, conditions: {} }, condPending = {}, hpPending = {}, hpSendTimer = null, hpErr = "";
   function fetchSheet(link) {
     var u = relayUrl(), m = String(link).match(/characters\/(\d+)/) || String(link).match(/^\s*(\d{3,12})\s*$/);
     if (!u) return Promise.reject(new Error("Add the HP relay address first (Show & GM tab)."));
@@ -440,6 +450,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var ids = S.party.map(ddbOf).filter(Boolean);
     fetch(u + "/hp?ids=" + ids.join(",") + "&t=" + Date.now()).then(function (r) { return r.json(); }).then(function (j) {
       LIVE.chars = j.chars || {}; LIVE.battle = typeof j.battle === "boolean" ? j.battle : null; LIVE.mapBars = j.mapBars !== false;
+      LIVE.conditions = Object.assign({}, j.conditions || {}, condPending);
       // keep values we're still sending, so the numbers don't jump back while a click is in flight
       LIVE.manual = Object.assign({}, j.manual || {}, hpPending);
       hpErr = LIVE.battle === null ? "The relay has no storage yet (KV not bound), so battle mode and manual HP can't be saved." : "";
@@ -453,7 +464,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     if (!hpKey) { status("Add the relay key in the Battle / HP tab first.", "bad"); $("tab-battle").click(); return Promise.reject(); }
     return fetch(u + "/state", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + hpKey }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
-      .then(function (j) { LIVE.battle = j.state.battle; LIVE.mapBars = j.state.mapBars !== false; status("Sent to the stream.", "good"); paintBattle(); return j; })
+      .then(function (j) { LIVE.battle = j.state.battle; LIVE.mapBars = j.state.mapBars !== false; if (j.state.conditions) LIVE.conditions = Object.assign({}, j.state.conditions, condPending); status("Sent to the stream.", "good"); paintBattle(); return j; })
       .catch(function (e) { if (e) status("Relay said: " + e.message, "bad"); });
   }
   $("b-battle").addEventListener("click", function () { sendState({ battle: !LIVE.battle }); });
@@ -470,6 +481,25 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   }
   function damage(p, n) { var h = hpOf(p), t = h.temp, left = n; if (t) { var a = Math.min(t, left); t -= a; left -= a; } setHp(p, h.current - left, t); }
   function heal(p, n) { var h = hpOf(p); setHp(p, h.current + n, h.temp); }
+  // conditions: the DM's manual ones live on the relay; ones ticked on a D&D Beyond sheet show dashed and can't be switched off here
+  function sheetConds(p) { var d = LIVE.chars[ddbOf(p)]; return (d && d.conditions) || []; }
+  function manualConds(p) { return (LIVE.conditions[p.id] || []).slice(); }
+  function cid(x) { return typeof x === "string" ? x : x.id; }
+  function setConds(p, list) {
+    LIVE.conditions[p.id] = list; condPending[p.id] = list; paintBattle();
+    var body = {}; body[p.id] = list.length ? list : null;
+    sendState({ conditions: body }).then(function () { delete condPending[p.id]; });
+  }
+  function toggleCond(p, id) {
+    if (sheetConds(p).some(function (x) { return cid(x) === id; })) { status("That condition is ticked on " + (p.name || "their") + "'s D&D Beyond sheet. Clear it there.", "warn"); return; }
+    var list = manualConds(p), i = list.findIndex(function (x) { return cid(x) === id; });
+    if (id === "exhaustion") {   // each click goes up a level: 1 → 6, then off
+      var lv = i >= 0 ? (list[i].level || 1) + 1 : 1;
+      if (i >= 0) list.splice(i, 1);
+      if (lv <= 6) list.push({ id: "exhaustion", level: lv });
+    } else if (i >= 0) list.splice(i, 1); else list.push(id);
+    setConds(p, list);
+  }
   function renderBattle() {
     var root = $("s-battle"); root.innerHTML = "";
     var c = document.createElement("div"); c.className = "card";
@@ -480,7 +510,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var st = document.createElement("p"); st.className = "hint"; st.id = "hp-state"; c.appendChild(st);
     root.appendChild(c);
     var d = document.createElement("div"); d.className = "card"; d.id = "hp-list";
-    d.innerHTML = "<h3>Hit points</h3><p class=\"hint\">Normally each bar follows the player's D&amp;D Beyond sheet. Pressing a button here switches that character to <b>manual</b> until you press <b>Use D&amp;D Beyond</b>. Damage comes off temp HP first.</p>";
+    d.innerHTML = "<h3>Hit points</h3><p class=\"hint\">Normally each bar follows the player's D&amp;D Beyond sheet. Pressing a button here switches that character to <b>manual</b> until you press <b>Use D&amp;D Beyond</b>. Damage comes off temp HP first.</p><p class=\"hint\"><b>Conditions:</b> anything ticked on a player's D&amp;D Beyond sheet shows by itself (dashed outline). Click a condition to add or remove it yourself. Exhaustion goes up a level each click. Conditions show on stream whenever the HP bars do.</p>";
     S.party.forEach(function (p) {
       var row = document.createElement("div"); row.className = "hprow"; row.setAttribute("data-pid", p.id);
       var who = document.createElement("div"); who.className = "who";
@@ -496,7 +526,19 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       b.appendChild(btn("Set temp", function () { var n = +amt.value; if (amt.value !== "") { setHp(p, hpOf(p).current, n); amt.value = ""; } }));
       b.appendChild(btn("Full", function () { setHp(p, hpOf(p).max, 0); }));
       b.appendChild(btn("Use D&D Beyond", function () { delete LIVE.manual[p.id]; delete hpPending[p.id]; var m = {}; m[p.id] = null; sendState({ manual: m }); paintBattle(); }));
-      row.appendChild(b); d.appendChild(row);
+      row.appendChild(b);
+      if (window.ReditusConditions) {
+        var cr = document.createElement("div"); cr.className = "conds"; cr.setAttribute("role", "group"); cr.setAttribute("aria-label", "Conditions for " + (p.name || ""));
+        window.ReditusConditions.list.forEach(function (c) {
+          var ch = document.createElement("button"); ch.type = "button"; ch.className = "cchip"; ch.setAttribute("data-c", c.id); ch.style.setProperty("--cc", c.col);
+          ch.innerHTML = window.ReditusConditions.icon(c.id) + "<span>" + c.name + "</span>";
+          ch.addEventListener("click", function () { toggleCond(p, c.id); });
+          cr.appendChild(ch);
+        });
+        cr.appendChild(btn("Clear", function () { setConds(p, []); }));
+        row.appendChild(cr);
+      }
+      d.appendChild(row);
     });
     root.appendChild(d);
     paintBattle();
@@ -516,6 +558,14 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       src.textContent = h.current + (h.temp ? " +" + h.temp + " temp" : "") + " / " + h.max + " · " +
         (h.src === "manual" ? "manual (D&D Beyond ignored)" : h.src === "ddb" ? "from D&D Beyond" : h.src === "none" ? (ddbOf(p) ? "waiting for D&D Beyond…" : "no sheet link, manual only") : "D&D Beyond: " + h.src.slice(4));
       row.querySelector(".c").style.width = Math.min(100, h.current / h.max * 100) + "%";
+      var mine = manualConds(p), sheet = sheetConds(p);
+      Array.prototype.forEach.call(row.querySelectorAll(".cchip"), function (ch) {
+        var id = ch.getAttribute("data-c"), m = mine.filter(function (x) { return cid(x) === id; })[0], sh = sheet.filter(function (x) { return cid(x) === id; })[0], on = m || sh;
+        ch.setAttribute("aria-pressed", on ? "true" : "false"); ch.classList.toggle("sheet", !!sh);
+        ch.title = sh ? "Set on the D&D Beyond sheet" : id === "exhaustion" ? "Click to raise the level (1–6, then off)" : "";
+        var lvl = on && id === "exhaustion" ? " " + (on.level || 1) : "";
+        ch.querySelector("span").textContent = ((window.ReditusConditions.byId[id] || {}).name || id) + lvl;
+      });
       var t = row.querySelector(".t"); t.style.left = Math.min(100, h.current / h.max * 100) + "%"; t.style.width = Math.min(100 - h.current / h.max * 100, h.temp / h.max * 100) + "%";
     });
   }

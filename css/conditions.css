@@ -178,3 +178,7 @@
 
 /* the gold frame's own sweep shine sits above the effects */
 .frame .shine { z-index: 4; }
+
+/* small condition icons on the scrolling-bar stat card */
+.cmarks.ccard { position: absolute; left: 104px; bottom: -14px; z-index: 6; gap: 3px; }
+.cmarks.ccard .cmark { width: 28px; height: 28px; }

@@ -36,6 +36,16 @@ export default {
       const st = await readState(env);
       if (typeof body.battle === "boolean") st.battle = body.battle;
       if (typeof body.mapBars === "boolean") st.mapBars = body.mapBars;
+      // manual conditions set by the DM: { conditions: { felix: ["banished", {id:"exhaustion",level:2}] } }  (null clears)
+      if (body.conditions && typeof body.conditions === "object") {
+        st.conditions = st.conditions || {};
+        Object.keys(body.conditions).slice(0, 20).forEach((k) => {
+          const v = body.conditions[k];
+          if (!/^[\w-]{1,40}$/.test(k)) return;
+          if (!v || !Array.isArray(v) || !v.length) { delete st.conditions[k]; return; }
+          st.conditions[k] = v.slice(0, 20).map((x) => typeof x === "string" ? x.slice(0, 24) : { id: String(x.id || "").slice(0, 24), level: x.level != null ? Math.max(0, Math.min(6, +x.level || 0)) : undefined }).filter((x) => x && (x.id || typeof x === "string"));
+        });
+      }
       if (body.manual && typeof body.manual === "object") {
         Object.keys(body.manual).slice(0, 20).forEach((k) => {
           const v = body.manual[k];
@@ -72,7 +82,7 @@ export default {
       catch (e) { chars[id] = { error: String(e && e.message || e) }; }
     }));
     const st = await stP;
-    return json({ t: Date.now(), battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, manual: st ? st.manual : {}, chars });
+    return json({ t: Date.now(), battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, manual: st ? st.manual : {}, chars });
   },
 };
 
@@ -131,7 +141,11 @@ function summarise(c, debug) {
   const removed = c.removedHitPoints || 0;
   const temp = c.temporaryHitPoints || 0;
   const ds = c.deathSaves || {};
+  // D&D Beyond condition ids → names (exhaustion keeps its level)
+  const COND = { 1: "blinded", 2: "charmed", 3: "deafened", 4: "exhaustion", 5: "frightened", 6: "grappled", 7: "incapacitated", 8: "invisible", 9: "paralyzed", 10: "petrified", 11: "poisoned", 12: "prone", 13: "restrained", 14: "stunned", 15: "unconscious" };
+  const conditions = (c.conditions || []).map((k) => COND[k.id] ? (k.id === 4 ? { id: "exhaustion", level: k.level || 1 } : COND[k.id]) : null).filter(Boolean);
   const out = {
+    conditions,
     name: c.name,
     level,
     max,

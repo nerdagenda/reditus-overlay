@@ -579,6 +579,10 @@
       var b = el("div", "badges", box);
       b.innerHTML = '<div class="badge ac">' + SHIELD + "<b>" + esc(stat(p.ac)) + '</b></div><div class="badge hp" data-pid="' + esc(p.id) + '">' + HEART + "<b>" + esc(stat(p.hp)) + "</b></div>";
       setTimeout(refreshHeartBadges, 0);
+      if (window.ReditusConditions) {
+        var cl = window.ReditusConditions.normalize(condsFor(p));
+        if (cl.length) { var cc = el("div", "cmarks ccard", box); cc.innerHTML = window.ReditusConditions.markerHTML(cl); }
+      }
     }
     return u;
   }
