@@ -112,12 +112,20 @@
 /* RESTRAINED — chains across the corners, tightening; GRAPPLED — vines grow in and sway */
 .cchain ellipse { fill: none; stroke: #cfd1de; stroke-width: 6.5; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .9)); }
 .cchain ellipse:nth-child(odd) { stroke: #b4b7c8; }
-/* side chains stay put (just strain a little); the criss-cross is off most of the time, slams in, holds ~8s, slides back out */
-.cchain .cside { animation: cstrain 3.2s ease-in-out infinite; }
-@keyframes cstrain { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
-.cchain .clinks { transform: translateX(calc(var(--len) * -1)); animation: cchainin 34s cubic-bezier(.3, 1.3, .5, 1) infinite; animation-delay: 6s; }
-@keyframes cchainin { 0%, 44% { transform: translateX(calc(var(--len) * -1)); } 48% { transform: translateX(0); } 49% { transform: translateX(-6px); } 50% { transform: translateX(0); }
-  60% { transform: translateX(-8px); } 62% { transform: translateX(0); } 70% { transform: translateX(0); } 76%, 100% { transform: translateX(var(--len)); } }
+/* side chains: slide in when restrained starts, then stay (straining) until it ends, then slide out */
+.cchain .cside { animation: csidein .9s cubic-bezier(.3, 1.35, .5, 1) both; }
+.cchain .cside.out { animation: csideout 1.1s cubic-bezier(.5, -0.3, .8, .4) both; }
+@keyframes csidein { from { transform: translateX(calc(var(--len) * -1)); } to { transform: none; } }
+@keyframes csideout { from { transform: none; } to { transform: translateX(var(--len)); } }
+.cchain .cside .cjig { animation: cstrain 2.6s ease-in-out .9s infinite; }
+.cchain .cside:nth-of-type(2) .cjig { animation-duration: 3.1s; }
+@keyframes cstrain { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-11px, 3px); } 28% { transform: translate(-6px, -2px); } 60% { transform: translate(-13px, -4px); } 70% { transform: translate(-4px, 2px); } }
+/* criss-cross: comes in with the side chains, holds ~8s, slides off to give the camera room (~17s), then slams back */
+.cchain .clinks { transform: translateX(calc(var(--len) * -1)); animation: cchainin 28s cubic-bezier(.3, 1.3, .5, 1) infinite; }
+@keyframes cchainin { 0% { transform: translateX(calc(var(--len) * -1)); } 3.5% { transform: translateX(0); } 4.5% { transform: translateX(-7px); } 5.5% { transform: translateX(0); }
+  18% { transform: translateX(-9px); } 20% { transform: translateX(0); } 31% { transform: translateX(0); } 38%, 100% { transform: translateX(var(--len)); } }
+.cchain .clinks .cjig { animation: cstrain 3.4s ease-in-out infinite; }
+.cexit { z-index: 2; }
 .frame.cf-restrained .edge, .frame.cf-restrained .corner { filter: grayscale(.6) brightness(.9); }
 .cvine { fill: none; stroke: #4f9a2e; stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .85)); stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: cgrow 22s ease-out infinite; }
 .cleaf { fill: #78c94a; stroke: #2f6a18; stroke-width: 1.2; opacity: 0; animation: cleaf 22s ease-out infinite; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .75)); }

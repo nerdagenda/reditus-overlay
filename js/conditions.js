@@ -141,20 +141,21 @@
       };
       z.insertAdjacentHTML("beforeend", svg(w, h, '<g class="ccrack">' + cr(0, 0, 1, 1) + cr(w, 0, -1, 1) + cr(w, h, -1, -1) + cr(0, h, 1, -1) + "</g>", "csvg"));
     },
-    restrained: function (f, z, w, h) {
-      // big chains criss-crossing the whole window; each one slides off and slams back on now and then
-      var chain = function (x0, y0, x1, y1, i) {
-        var len = Math.hypot(x1 - x0, y1 - y0), a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI, n = Math.ceil(len / 40) + 1, s = "";
-        for (var k = 0; k < n; k++) s += '<ellipse cx="' + (k * 40 + 20) + '" cy="0" rx="24" ry="' + (k % 2 ? 5 : 13) + '"/>';
-        return '<g transform="translate(' + x0 + " " + y0 + ") rotate(" + a + ')"><g class="clinks" style="--len:' + Math.round(len + 80) + "px;animation-delay:" + (i * .35) + 's">' + s + "</g></g>";
+    restrained: function (f, z, w, h, t, x, exiting) {
+      // chain(x0,y0 → x1,y1): links laid along the line; sc = link size; cls = how it moves
+      var chain = function (x0, y0, x1, y1, cls, sc, delay) {
+        var len = Math.hypot(x1 - x0, y1 - y0), a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI, st = 40 * sc, n = Math.ceil(len / st) + 1, s = "";
+        for (var k = 0; k < n; k++) s += '<ellipse cx="' + (k * st + st / 2) + '" cy="0" rx="' + (24 * sc) + '" ry="' + ((k % 2 ? 5 : 13) * sc) + '" stroke-width="' + (6.5 * sc) + '"/>';
+        return '<g transform="translate(' + x0 + " " + y0 + ") rotate(" + a + ')"><g class="' + cls + '" style="--len:' + Math.round(len + 120) + "px;animation-delay:" + (delay || 0) + 's"><g class="cjig">' + s + "</g></g></g>";
       };
-      var m = 30, sx = Math.max(26, w * .09);
-      z.insertAdjacentHTML("beforeend", svg(w, h, '<g class="cchain">' +
-        // two chains that never leave: straight down the left and right sides
-        chain(sx, -m, sx, h + m, 0).replace('class="clinks"', 'class="cside"') + chain(w - sx, -m, w - sx, h + m, 0).replace('class="clinks"', 'class="cside"') +
-        // the criss-cross: slams in over the middle now and then, holds, then slides back out
-        chain(-m, -m, w + m, h + m, 0) + chain(-m, h + m, w + m, -m, 1) + chain(-m, h * .3, w + m, h * .62, 2) + "</g>", "csvg"));
-      f.classList.add("cf-restrained");
+      var m = 40, lx = Math.max(30, w * .085), rx = w - Math.max(26, w * .1);
+      // two side chains, each tilted a little differently (one bigger) for depth: slide in, then stay (straining) until the condition ends
+      var tl = Math.tan(4 * Math.PI / 180) * (h + 2 * m) / 2, tr = Math.tan(-7 * Math.PI / 180) * (h + 2 * m) / 2;
+      var side = chain(lx - tl, -m, lx + tl, h + m, exiting ? "cside out" : "cside", 1.22, 0) + chain(rx - tr, -m, rx + tr, h + m, exiting ? "cside out" : "cside", .95, .18);
+      // the criss-cross comes in with them, holds, slides away to give the camera room, and returns now and then
+      var mid = exiting ? "" : chain(-m, -m, w + m, h + m, "clinks", 1, .1) + chain(-m, h + m, w + m, -m, "clinks", 1, .32) + chain(-m, h * .3, w + m, h * .62, "clinks", 1, .5);
+      z.insertAdjacentHTML("beforeend", svg(w, h, '<g class="cchain">' + side + mid + "</g>", "csvg"));
+      if (!exiting) f.classList.add("cf-restrained");
     },
     grappled: function (f, z, w, h) {
       var k = Math.min(w, h);
@@ -207,14 +208,28 @@
   }
 
   /* apply to one camera frame. f = .frame element, s = slot {w,h,size}, t = border px */
+  // remembers what each window showed last time, so a redraw carries on mid-animation (no replayed entrances)
+  // and a removed condition can animate out (restrained chains)
+  var MEM = {}, EXITS = { restrained: 1300 };
   function apply(f, s, t, list) {
-    list = norm(list); if (!list.length) return;
+    list = norm(list);
+    var key = s.id || "x", now = Date.now(), prev = MEM[key] || { starts: {}, main: null }, starts = {};
+    list.forEach(function (x) { starts[x.id] = prev.starts[x.id] || now; });
+    var main = null;
+    for (var i = 0; i < list.length; i++) if (FX[list[i].id]) { main = list[i]; break; }
+    var gone = prev.main && (!main || main.id !== prev.main) && EXITS[prev.main] ? prev.main : null;
+    MEM[key] = { starts: starts, main: main && main.id };
+    if (!list.length && !gone) return;
     defs();
     var big = s.w >= 380, z = el("div", "cfx", null);
     z.style.left = t + "px"; z.style.top = t + "px"; z.style.width = s.w + "px"; z.style.height = s.h + "px";
     var edge = f.querySelector(".edge"); f.insertBefore(z, edge);
-    var main = null;
-    for (var i = 0; i < list.length; i++) if (FX[list[i].id]) { main = list[i]; break; }
+    if (gone) {   // play the leaving animation for the effect that just ended
+      var zx = el("div", "cfx cexit", null); zx.style.cssText = z.style.cssText; f.insertBefore(zx, edge);
+      build[gone](f, zx, s.w, s.h, t, { id: gone }, true);
+      setTimeout(function () { zx.remove(); }, EXITS[gone]);
+    }
+    if (!list.length) return;
     if (main) build[main.id](f, z, s.w, s.h, t, main);
     if (list.some(function (x) { return x.id === "concentrating"; })) concentrating(f, z, s.w, s.h, !main);
     // the top condition gets a big icon with its name beside it; any others sit after it as small icons
@@ -223,6 +238,13 @@
     var c = BY[lead.id];
     mk.innerHTML = '<span class="clead c-' + c.id + '" style="--cc:' + c.col + '">' + markerHTML([lead]) + '<b class="clabel">' + c.name + (lead.id === "exhaustion" && lead.level ? " " + lead.level : "") + "</b></span>" +
       (rest.length ? '<span class="crest">' + markerHTML(rest) + "</span>" : "");
+    // fast-forward every animation to where it would be if it had never been redrawn
+    var elapsed = main ? now - starts[main.id] : 0;
+    if (elapsed > 50 && z.getAnimations) {
+      var anims = z.getAnimations({ subtree: true }).concat(mk.getAnimations({ subtree: true }));
+      Array.prototype.forEach.call(f.querySelectorAll(":scope > .cghost, :scope > .czap, :scope > .cdark"), function (e) { anims = anims.concat(e.getAnimations({ subtree: true })); });
+      anims.forEach(function (an) { try { an.currentTime = (an.currentTime || 0) + elapsed; } catch (e) {} });
+    }
   }
 
   window.ReditusConditions = { list: C, byId: BY, fromDDB: DDB, apply: apply, normalize: norm, markerHTML: markerHTML, icon: function (id) { return BY[id] ? iconSVG(BY[id]) : ""; } };

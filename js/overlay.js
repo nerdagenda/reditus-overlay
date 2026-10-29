@@ -139,7 +139,7 @@
       if (one) SM = SM.filter(function (c) { return (c[0].id || c[0]) === one; }).slice(0, 1);
       var rects = one ? [{ x: 360, y: 150, w: 1200, h: 675 }] : grid(SM.length, { x: 50, y: 40, w: 1820, h: 980 }, 4, 16 / 9, 40, 62);
       SM.forEach(function (cs, i) {
-        var who = Object.assign({}, pool[i % Math.max(1, pool.length)] || {}, { conditions: cs, mode: "cam", ddb: "" });
+        var who = Object.assign({}, pool[i % Math.max(1, pool.length)] || {}, { conditions: window.__samplerOff ? [] : cs, mode: "cam", ddb: "" });
         var label = cs.length > 2 ? (cs.length === 4 && cs[0] === "prone" ? "Marker only" : "Stacked") : (CN[cs[0].id || cs[0]] || {}).name || cs[0];
         slots.push({ id: "s" + i, label: label, who: who, x: rects[i].x, y: rects[i].y, w: rects[i].w, h: rects[i].h, size: one ? "l" : "s", npPos: "bottom" });
       });
@@ -313,8 +313,7 @@
     sh.style.setProperty("--sweep-delay", (-(idx * 2.1) % 14).toFixed(1) + "s");
     corners(f, z.k, ["tl", "tr", "br", "bl"]);
     if (!s.map && s.who && s.id !== "gm" && window.ReditusConditions) {
-      var cl = condsFor(s.who);
-      if (cl.length) window.ReditusConditions.apply(f, s, t, cl);
+      window.ReditusConditions.apply(f, s, t, condsFor(s.who));
     }
     if (!s.map && s.label) {
       var cx = s.x + s.w / 2, cy = s.npPos === "top" ? s.y - t / 2 : s.y + s.h + t / 2;
@@ -908,6 +907,14 @@
       render();
     }
   });
+
+  if (SCENE === "sampler" && q.get("toggle")) {
+    var TOG = true;
+    setInterval(function () {
+      if (!D) return; TOG = !TOG;
+      window.__samplerOff = !TOG; render();
+    }, Math.max(4, +q.get("toggle")) * 1000);
+  }
 
   /* ---------------- go ---------------- */
   loadData(function (d) { if (!d) return; D = d; lastSig = JSON.stringify(d); render(); hpTick(); sheetTick(); setInterval(poll, POLL_MS); });
