@@ -99,7 +99,9 @@
 
     if (SCENE === "main") {
       L.ticker = L.logos = true;
-      gmSlot({ x: 49, y: 120, w: 386, h: 627 }, "m", "top");
+      // with 4 or fewer players the grid shrinks to two columns, so slide the GM window 20% (of its width) toward the party
+      var gmShift = party.length <= 4 ? 386 * (cfg.gmShift != null ? cfg.gmShift : 0.2) : 0;
+      gmSlot({ x: 49 + gmShift, y: 120, w: 386, h: 627 }, "m", "top");
       grid(party.length, { x: 486, y: 115, w: 1388, h: 636 }, party.length <= 4 ? 2 : party.length <= 6 ? 3 : 4, 432 / 281, 46, 74)
         .forEach(function (r, i) { pSlot(party[i], r, "s"); });
     } else if (SCENE === "spotlight") {
