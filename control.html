@@ -296,7 +296,22 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     d.appendChild(g2);
     var r = document.createElement("div"); r.className = "row";
     r.appendChild(check("Show art instead of the GM camera", S.gm.mode === "art", function (v) { S.gm.mode = v ? "art" : "cam"; }, "g-mode"));
-    d.appendChild(r); root.appendChild(d);
+    d.appendChild(r);
+    // main-screen GM position slider
+    S.scenes = S.scenes || {}; S.scenes.main = S.scenes.main || {};
+    var cur = S.scenes.main.gmShift != null ? +S.scenes.main.gmShift : 0.2;
+    var w = document.createElement("label"); w.className = "f"; w.style.marginTop = "12px";
+    w.innerHTML = 'GM window position, main party screen <span id="g-shift-val" style="color:var(--gold-hi);text-transform:none;letter-spacing:0"></span>';
+    var sl = document.createElement("input"); sl.type = "range"; sl.id = "g-shift"; sl.min = 0; sl.max = 0.75; sl.step = 0.01; sl.value = cur;
+    sl.style.accentColor = "var(--gold)"; sl.style.padding = "0";
+    var val = w.querySelector("#g-shift-val");
+    function show() { val.textContent = Math.round(sl.value * 100) + "% right"; }
+    sl.addEventListener("input", function () { S.scenes.main.gmShift = +sl.value; show(); changed(); });
+    w.appendChild(sl); show(); d.appendChild(w);
+    var h = document.createElement("p"); h.className = "hint";
+    h.textContent = "Slides the GM window toward the party. It stops before touching the party windows, so with 5+ players it can only move a little. Switch the preview to Main party to see it.";
+    d.appendChild(h);
+    root.appendChild(d);
   }
 
   /* ---------- Break ---------- */

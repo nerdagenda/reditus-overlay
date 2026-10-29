@@ -99,11 +99,13 @@
 
     if (SCENE === "main") {
       L.ticker = L.logos = true;
-      // with 4 or fewer players the grid shrinks to two columns, so slide the GM window 20% (of its width) toward the party
-      var gmShift = party.length <= 4 ? 386 * (cfg.gmShift != null ? cfg.gmShift : 0.2) : 0;
-      gmSlot({ x: 49 + gmShift, y: 120, w: 386, h: 627 }, "m", "top");
-      grid(party.length, { x: 486, y: 115, w: 1388, h: 636 }, party.length <= 4 ? 2 : party.length <= 6 ? 3 : 4, 432 / 281, 46, 74)
-        .forEach(function (r, i) { pSlot(party[i], r, "s"); });
+      // GM window: slides right by gmShift × its width (control panel slider), never closer than 46px to the party
+      var pg = grid(party.length, { x: 486, y: 115, w: 1388, h: 636 }, party.length <= 4 ? 2 : party.length <= 6 ? 3 : 4, 432 / 281, 46, 74);
+      var gridLeft = pg.reduce(function (m, r) { return Math.min(m, r.x); }, 1920);
+      var shiftPx = 386 * (cfg.gmShift != null ? +cfg.gmShift : 0.2);
+      shiftPx = Math.max(0, Math.min(shiftPx, gridLeft - 46 - 386 - 49));
+      gmSlot({ x: 49 + shiftPx, y: 120, w: 386, h: 627 }, "m", "top");
+      pg.forEach(function (r, i) { pSlot(party[i], r, "s"); });
     } else if (SCENE === "spotlight") {
       L.lines = "fan";
       var f = party.filter(function (p) { return p.id === FOCUS; })[0] || party[0];
