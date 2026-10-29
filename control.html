@@ -123,19 +123,21 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       <button role="tab" id="tab-show" aria-selected="false" data-t="show">Show &amp; GM</button>
       <button role="tab" id="tab-break" aria-selected="false" data-t="break">Break screen</button>
       <button role="tab" id="tab-battle" aria-selected="false" data-t="battle">Battle / HP</button>
+      <button role="tab" id="tab-talk" aria-selected="false" data-t="talk">Conversation</button>
     </div>
     <section id="s-party"></section>
     <section id="s-ticker" hidden></section>
     <section id="s-show" hidden></section>
     <section id="s-break" hidden></section>
     <section id="s-battle" hidden></section>
+    <section id="s-talk" hidden></section>
   </main>
 
   <aside class="preview">
     <div class="pv-bar">
       <label>Preview screen
         <select id="pv-scene">
-          <option value="main">Main party</option><option value="spotlight">Spotlight</option>
+          <option value="main">Main party</option><option value="spotlight">Spotlight</option><option value="talk">Conversation</option>
           <option value="map">Battle map</option><option value="gm">GM screen</option>
           <option value="intro">Intro</option><option value="break">Short break</option>
         </select>
@@ -268,6 +270,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       r2.appendChild(field("Portrait image path", p.portrait, function (v) { p.portrait = v; img.src = v; }, { id: "p-" + idx + "-img" }));
       r2.appendChild(field("Off-cam art path (optional)", p.art, function (v) { p.art = v; }, { id: "p-" + idx + "-artimg" }));
       r2.appendChild(field("Off-cam animation (video path)", p.video, function (v) { p.video = v; }, { id: "p-" + idx + "-video" }));
+      r2.appendChild(field("OBS camera source (optional)", p.cam, function (v) { p.cam = v.trim() || undefined; }, { id: "p-" + idx + "-cam" }));
       var dl = field("D&D Beyond sheet link (live HP)", p.ddb, function (v) { p.ddb = v.trim(); setSheet(); }, { id: "p-" + idx + "-ddb" });
       var sw = document.createElement("div"); sw.className = "sheetrow";
       var sheetIn = dl.querySelector("input"); dl.replaceChild(sw, sheetIn); sw.appendChild(sheetIn);
@@ -377,6 +380,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var g2 = document.createElement("div"); g2.className = "grid";
     g2.appendChild(field("Nameplate", S.gm.label, function (v) { S.gm.label = v; }, { id: "g-label" }));
     g2.appendChild(field("Off-cam art path (optional)", S.gm.art, function (v) { S.gm.art = v; }, { id: "g-art" }));
+    g2.appendChild(field("OBS camera source (optional)", S.gm.cam, function (v) { S.gm.cam = v.trim() || undefined; }, { id: "g-cam" }));
     d.appendChild(g2);
     var r = document.createElement("div"); r.className = "row";
     r.appendChild(check("Show art instead of the GM camera", S.gm.mode === "art", function (v) { S.gm.mode = v ? "art" : "cam"; }, "g-mode"));
@@ -451,6 +455,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     fetch(u + "/hp?ids=" + ids.join(",") + "&t=" + Date.now()).then(function (r) { return r.json(); }).then(function (j) {
       LIVE.chars = j.chars || {}; LIVE.battle = typeof j.battle === "boolean" ? j.battle : null; LIVE.mapBars = j.mapBars !== false;
       LIVE.conditions = Object.assign({}, j.conditions || {}, condPending);
+      LIVE.talk = j.talk && j.talk.a ? j.talk : null; paintTalk();
       // keep values we're still sending, so the numbers don't jump back while a click is in flight
       LIVE.manual = Object.assign({}, j.manual || {}, hpPending);
       hpErr = LIVE.battle === null ? "The relay has no storage yet (KV not bound), so battle mode and manual HP can't be saved." : "";
@@ -570,6 +575,47 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     });
   }
 
+  /* ---------- Conversation (talks to the relay: the conversation scene changes within a few seconds, no Publish needed) ---------- */
+  var talkPick = null;
+  function talkOptions() {
+    return S.party.map(function (p) { return [p.id, p.fullName || p.name]; }).concat([["gm", (S.gm && S.gm.label) || "Grand Master"]]);
+  }
+  function renderTalk() {
+    var root = $("s-talk"); root.innerHTML = "";
+    var c = document.createElement("div"); c.className = "card";
+    c.innerHTML = "<h3>Conversation scene</h3><p class=\"hint\">Pick the two characters talking and press <b>Apply</b>. The conversation screen in OBS swaps to them within a few seconds, cameras included once OBS camera placement is set up. The scrolling bar alternates between just their two stat cards. Then switch to the conversation scene in OBS.</p>";
+    var g = document.createElement("div"); g.className = "grid";
+    var cur = talkPick || LIVE.talk || {};
+    var fa = field("Left", cur.a || (S.party[0] || {}).id, function () {}, { id: "talk-a", options: talkOptions() });
+    var fb = field("Right", cur.b || (S.party[1] || {}).id, function () {}, { id: "talk-b", options: talkOptions() });
+    g.appendChild(fa); g.appendChild(fb); c.appendChild(g);
+    ["talk-a", "talk-b"].forEach(function (id) { setTimeout(function () { var el = $(id); if (el) el.addEventListener("change", function () { talkPick = { a: $("talk-a").value, b: $("talk-b").value }; previewTalk(); paintTalk(); }); }, 0); });
+    var r = document.createElement("div"); r.className = "row"; r.style.marginTop = "12px";
+    r.appendChild(btn("⇄ Swap sides", function () { var a = $("talk-a").value; $("talk-a").value = $("talk-b").value; $("talk-b").value = a; talkPick = { a: $("talk-a").value, b: $("talk-b").value }; previewTalk(); paintTalk(); }));
+    var ap = btn("Apply to stream", function () {
+      var a = $("talk-a").value, b = $("talk-b").value;
+      if (a === b) { status("Pick two different characters.", "warn"); return; }
+      sendState({ talk: { a: a, b: b } }).then(function (j) { if (j) { LIVE.talk = { a: a, b: b }; talkPick = null; paintTalk(); status("Conversation scene updated.", "good"); } });
+    }, "primary");
+    ap.classList.remove("small"); ap.id = "talk-apply"; r.appendChild(ap);
+    c.appendChild(r);
+    var st = document.createElement("p"); st.className = "hint"; st.id = "talk-state"; c.appendChild(st);
+    root.appendChild(c);
+    paintTalk();
+  }
+  function nameOf(id) { var o = talkOptions().filter(function (x) { return x[0] === id; })[0]; return o ? o[1] : id; }
+  function paintTalk() {
+    var st = $("talk-state"); if (!st) return;
+    var live = LIVE.talk, pend = talkPick && (!live || talkPick.a !== live.a || talkPick.b !== live.b);
+    st.innerHTML = (live ? "On stream now: <b>" + esc(nameOf(live.a)) + "</b> &amp; <b>" + esc(nameOf(live.b)) + "</b>." : "Nothing applied yet. The scene shows the first two seated characters.") +
+      (pend ? " <span style=\"color:var(--gold-hi)\">Not applied yet: press Apply.</span>" : "");
+  }
+  // show the picked pair in the preview straight away (switches the preview to the conversation screen)
+  function previewTalk() {
+    if ($("pv-scene").value !== "talk") { $("pv-scene").value = "talk"; reloadPreview(); setTimeout(previewTalk, 900); return; }
+    [pv, pvu].forEach(function (f) { try { if (!f.hidden && f.contentWindow) f.contentWindow.postMessage({ type: "reditus:talk", talk: talkPick }, "*"); } catch (e) {} });
+  }
+
   /* ---------- Break ---------- */
   function renderBreak() {
     var B = S.breakScreen = S.breakScreen || {};
@@ -592,7 +638,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
   function renderAll() {
     if (!S) return;
-    renderParty(); renderTicker(); renderShow(); renderBreak(); renderBattle();
+    renderParty(); renderTicker(); renderShow(); renderBreak(); renderBattle(); renderTalk();
     var f = $("pv-focus"), cur = f.value;
     f.innerHTML = S.party.filter(function (p) { return p.seat !== false; }).map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; }).join("");
     if (cur) f.value = cur;
@@ -602,7 +648,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   document.querySelectorAll(".tabs button").forEach(function (b) {
     b.addEventListener("click", function () {
       document.querySelectorAll(".tabs button").forEach(function (x) { x.setAttribute("aria-selected", x === b ? "true" : "false"); });
-      ["party", "ticker", "show", "break", "battle"].forEach(function (t) { $("s-" + t).hidden = t !== b.dataset.t; });
+      ["party", "ticker", "show", "break", "battle", "talk"].forEach(function (t) { $("s-" + t).hidden = t !== b.dataset.t; });
     });
   });
 

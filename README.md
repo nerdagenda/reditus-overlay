@@ -52,3 +52,14 @@ The original artwork uses **Thailandesa**. Drop `Thailandesa.ttf` into the `font
 ## Testing in a normal browser
 
 Add `&preview=1` to fill the windows with character art so you can see the whole look without cameras.
+
+## Automatic camera placement (OBS WebSocket)
+Add `&obs=PASSWORD` (Tools → WebSocket Server Settings → Server Password) to each **top-layer** overlay link. Inside OBS the overlay then moves and resizes the camera sources in its own scene to match its windows, and hides cameras that aren't on that screen. No more lining up by hand.
+
+- Camera sources are matched by name: `<Nameplate> Cam` (e.g. `Trey Cam`, `A.T.L.A.S Cam`, `GM Cam`). A different name can be set per character in the control panel (Party → OBS camera source).
+- Add every camera to every overlay scene as an *existing* source, between the top and bottom layers.
+- Optional: `&obsscene=Scene Name` (if it can't find its scene), `&obsport=4455`, `&obsdebug=1` (status box).
+- The password only lives in the OBS browser-source URL; it's never sent anywhere except to OBS on the same computer.
+
+## Conversation scene
+`index.html?scene=talk` shows two characters (any two, GM included) side by side, and the scrolling bar alternates between just their stat cards. Pick the pair in the control panel → **Conversation** → **Apply**; it switches within a few seconds (via the HP relay).

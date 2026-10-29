@@ -36,6 +36,11 @@ export default {
       const st = await readState(env);
       if (typeof body.battle === "boolean") st.battle = body.battle;
       if (typeof body.mapBars === "boolean") st.mapBars = body.mapBars;
+      // conversation scene pair: { talk: { a: "trey", b: "gm" } }
+      if (body.talk && typeof body.talk === "object") {
+        const ok = (v) => typeof v === "string" && /^[\w-]{1,40}$/.test(v) ? v : "";
+        st.talk = { a: ok(body.talk.a), b: ok(body.talk.b) };
+      }
       // manual conditions set by the DM: { conditions: { felix: ["banished", {id:"exhaustion",level:2}] } }  (null clears)
       if (body.conditions && typeof body.conditions === "object") {
         st.conditions = st.conditions || {};
@@ -82,7 +87,7 @@ export default {
       catch (e) { chars[id] = { error: String(e && e.message || e) }; }
     }));
     const st = await stP;
-    return json({ t: Date.now(), battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, manual: st ? st.manual : {}, chars });
+    return json({ t: Date.now(), battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, talk: st ? st.talk || null : null, manual: st ? st.manual : {}, chars });
   },
 };
 

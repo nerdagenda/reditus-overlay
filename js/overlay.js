@@ -115,6 +115,16 @@
       if (f) { L.ticker = true; L.tickerOnly = f.id; }
       var rest = party.filter(function (p) { return p !== f; });
       column(rest.length, 1649, 46, 224, 146, 224 / 146, 822, 17).forEach(function (r, i) { pSlot(rest[i], r, "s"); });
+    } else if (SCENE === "talk") {
+      // conversation: any two characters (or the GM) side by side; the scrolling bar swaps between just their two cards
+      L.lines = "fan"; L.ticker = true;
+      var pick = talkPair(), all = (D.party || []), byId = function (id) { return id === "gm" ? "gm" : all.filter(function (p) { return p.id === id; })[0]; };
+      var A = byId(pick[0]), B = byId(pick[1]);
+      [[A, { x: 72, y: 128, w: 860, h: 559 }], [B, { x: 988, y: 128, w: 860, h: 559 }]].forEach(function (pr) {
+        if (pr[0] === "gm") gmSlot(pr[1], "l", "bottom"); else if (pr[0]) pSlot(pr[0], pr[1], "l");
+      });
+      L.tickerOnly = [A, B].filter(function (x) { return x && x !== "gm"; }).map(function (x) { return x.id; });
+      if (!L.tickerOnly.length) L.ticker = false;
     } else if (SCENE === "map") {
       L.ticker = L.logos = true;
       slots.push({ id: "map", label: "Battle Map", map: true, x: 439, y: 108, w: 1040, h: 675, size: "l" });
@@ -332,6 +342,13 @@
   var HPBARS = [];   // bars on screen right now
   var HPSIG = "";
   function ddbId(p) { var t = String((p && p.ddb) || ""), m = t.match(/characters\/(\d+)/) || t.match(/^\s*(\d{3,12})\s*$/); return m ? m[1] : ""; }
+  var TALK = null, TALKLOCK = false; // conversation pair from the relay (control panel → Apply); TALKLOCK = preview showing an unapplied pick
+  function talkPair() {
+    var t = TALK || (D.scenes && D.scenes.talk) || {}, ids = [t.a, t.b];
+    var seatedIds = (D.party || []).filter(function (p) { return p.seat !== false; }).map(function (p) { return p.id; });
+    if (!ids[0]) ids[0] = seatedIds[0]; if (!ids[1]) ids[1] = seatedIds.filter(function (x) { return x !== ids[0]; })[0];
+    return ids;
+  }
   function hpCfg() { return (D && D.hpRelay) || {}; }
   function battleOn() {
     if (SCENE === "map") return MAPBARS != null ? MAPBARS : hpCfg().mapBars !== false;
@@ -398,7 +415,9 @@
     var u = c.url.replace(/\/+$/, "") + "/hp?ids=" + ids.join(",") + "&t=" + Date.now();
     fetch(u, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j) return;
-      HP = j.chars || {}; MANUAL = j.manual || {}; CONDS = j.conditions || {}; BATTLE = typeof j.battle === "boolean" ? j.battle : null;
+      HP = j.chars || {}; MANUAL = j.manual || {}; CONDS = j.conditions || {};
+      var nt = j.talk && j.talk.a ? j.talk : null;
+      if (!TALKLOCK) { if (SCENE === "talk" && JSON.stringify(nt) !== JSON.stringify(TALK)) { TALK = nt; render(); } else TALK = nt; } BATTLE = typeof j.battle === "boolean" ? j.battle : null;
       MAPBARS = typeof j.mapBars === "boolean" ? j.mapBars : null;
       // battle switched or someone gained/lost a bar → rebuild the screen; otherwise just animate the bars
       var sig = hpOn() + "|" + (D.party || []).filter(hpEligible).map(function (p) { return p.id; }).join(",") + "|" + JSON.stringify((D.party || []).map(condsFor));
@@ -520,7 +539,10 @@
   function tickerItems() {
     var t = D.ticker || {}, msgs = (t.messages || []).slice(), ppl = (D.party || []).filter(function (p) { return p.ticker; });
     var out = [], i, r;
-    if (tk.only) { var who = (D.party || []).filter(function (p) { return p.id === tk.only; })[0]; return who ? [{ p: who }] : []; }
+    if (tk.only) {
+      var only = [].concat(tk.only);
+      return only.map(function (id) { return (D.party || []).filter(function (p) { return p.id === id; })[0]; }).filter(Boolean).map(function (p) { return { p: p }; });
+    }
     if (!t.pattern || t.pattern === "mix") {
       // default: a message, then `charactersBetween` character cards, then the next message… starting on a message
       var every = Math.max(1, +(t.charactersBetween || 2)), mi = 0, pi = 0, guard = 0;
@@ -634,6 +656,7 @@
     clearTimeout(tk.timer); clearInterval(tk.gleamTimer);
     tk.gleamTimer = setInterval(function () { gleam(tk.unit); }, 12000);
     var secs = it.m ? +(t.messageSeconds || t.seconds || 40) : +(t.seconds || 36);
+    if (SCENE === "talk") secs = +(((D.scenes || {}).talk || {}).cardSeconds || 15);   // conversation: swap between the two cards more often
     if (items.length > 1) tk.timer = setTimeout(function () { tk.idx++; showTicker(false); }, Math.max(4, secs) * 1000);
   }
   // when data changes, refresh the card on screen in place (e.g. a level-up shows immediately)
@@ -896,6 +919,8 @@
           "<br>" + Math.round(s.w) + " × " + Math.round(s.h) + "</div>";
       });
     }
+    // inside OBS (with &obs=…): line the real camera sources up with these windows
+    if (window.ReditusOBS && !LOCAL_PREVIEW) window.ReditusOBS.place(L.slots);
     document.documentElement.setAttribute("data-ready", "1");
   }
 
@@ -909,6 +934,8 @@
   // the preview page can ask for the next card ("Next card" button)
   addEventListener("message", function (e) {
     if (e.data === "reditus:next" && tk.root) { clearTimeout(tk.timer); tk.idx++; showTicker(false); }
+    // conversation pair picked in the control panel but not applied yet
+    if (e.data && e.data.type === "reditus:talk" && e.data.talk) { TALK = e.data.talk; TALKLOCK = true; if (D) render(); }
     // live preview from the control panel (unsaved changes)
     if (e.data && e.data.type === "reditus:data" && e.data.data) {
       LOCAL_PREVIEW = true; D = e.data.data; lastSig = JSON.stringify(D);
