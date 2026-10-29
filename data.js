@@ -38,8 +38,8 @@ window.REDITUS = {
         "cha": 11
       },
       "portrait": "assets/portraits/trey.jpg",
-      "video": "assets/idle/trey.mp4?v=30",
-      "art": "assets/idle/trey.jpg?v=30"
+      "video": "assets/idle/trey.mp4?v=31",
+      "art": "assets/idle/trey.jpg?v=31"
     },
     {
       "id": "darius",
