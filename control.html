@@ -267,6 +267,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .lpconds .cshow { font: 600 13px var(--body, Inter, sans-serif); padding: 0 10px; min-height: 40px; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-left: 0; cursor: pointer; white-space: nowrap; }
 .lpconds .cshow:hover { color: #fff; border-color: var(--gold); }
 .lpconds .cshow.on { color: #1c1205; background: var(--gold-hi); border-color: var(--gold-hi); }
+.lpconds .cshow.on.auto { background: rgba(233, 185, 121, .55); }
 .lpconds .cwrap.shown .cchip { box-shadow: 0 0 0 2px var(--gold-hi); }
 .lpconds .addc { border-style: dashed; color: var(--gold-hi); font-weight: 600; }
 /* condition picker pops over the card below so the grid never jumps */
@@ -1022,11 +1023,14 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
         ch.addEventListener("click", function () { toggleCond(p, id); });
         if (active.length > 1) {
           // several at once: pick which one's effect is on the frame (the rest stay as small icons)
-          var feat = (LIVE.featured || {})[p.id], on = feat === id, auto = !feat || !active.some(function (x) { return cid(x.x) === feat; });
+          // only one is on stream: the DM's pick, or else the most dire (same ranking as the overlay)
+          var feat = (LIVE.featured || {})[p.id], picked = !!feat && active.some(function (x) { return cid(x.x) === feat; });
+          var autoId = active.map(function (x) { return cid(x.x); }).sort(function (a, b) { return ((R.byId[a] || {}).rank || 0) - ((R.byId[b] || {}).rank || 0); })[0];
+          var shownId = picked ? feat : autoId, on = shownId === id;
           var wrap = document.createElement("span"); wrap.className = "cwrap" + (on ? " shown" : "");
-          var sh = document.createElement("button"); sh.type = "button"; sh.className = "cshow" + (on ? " on" : "");
-          sh.innerHTML = on ? "👁 Showing" : "👁 Show"; sh.setAttribute("aria-pressed", String(on));
-          sh.title = on ? "This effect is on the frame. Tap to go back to automatic." : "Show this condition's effect on the frame" + (auto ? " (now: automatic)" : "");
+          var sh = document.createElement("button"); sh.type = "button"; sh.className = "cshow" + (on ? " on" : "") + (on && !picked ? " auto" : "");
+          sh.innerHTML = on ? (picked ? "👁 On stream" : "👁 On stream · auto") : "Show"; sh.setAttribute("aria-pressed", String(on));
+          sh.title = on ? (picked ? "You picked this one. Tap to go back to automatic (most dire)." : "Picked automatically as the most dire.") : "Put this condition on stream instead";
           sh.addEventListener("click", function () { setFeatured(p, id); });
           wrap.appendChild(ch); wrap.appendChild(sh); cr.appendChild(wrap);
         } else cr.appendChild(ch);

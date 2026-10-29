@@ -7,25 +7,26 @@
   var SVGNS = "http://www.w3.org/2000/svg";
   // order = priority: only the highest frame effect plays; every marker shows
   var C = [
-    { id: "banished",      name: "Banished",      col: "#c39bff", icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 5.5a6.5 6.5 0 0 1 0 13a4.3 4.3 0 0 1 0-8.6a2.2 2.2 0 0 1 0 4.4"/>' },
+    // most dire first: when a character has several, only the highest one here is shown (unless the DM picks another)
+    { id: "unconscious",   name: "Unconscious",   col: "#a9b8ff", icon: '<path d="M4 7h6.5L4 14h6.5M13 11.5h6L13 18h6"/>' },
     { id: "petrified",     name: "Petrified",     col: "#d0d0d0", icon: '<path d="M3 19l5-9 3 4 3-6 7 11z"/><path d="M8 10l2.2 3.2M14 8l1 3"/>' },
     { id: "paralyzed",     name: "Paralyzed",     col: "#9fdcff", icon: '<circle cx="12" cy="12" r="9"/><path d="M13 5l-5 8h4l-1 6 5-8h-4z"/>' },
     { id: "stunned",       name: "Stunned",       col: "#ffe066", icon: '<path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7z"/>' },
-    { id: "frightened",    name: "Frightened",    col: "#b48cff", icon: '<path d="M6 20V10a6 6 0 0 1 12 0v10l-2-2-2 2-2-2-2 2-2-2z"/><circle cx="10" cy="10" r=".9"/><circle cx="14" cy="10" r=".9"/><path d="M10 14.5q2-1.6 4 0"/>' },
+    { id: "incapacitated", name: "Incapacitated", col: "#ff8a80", icon: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>' },
+    { id: "banished",      name: "Banished",      col: "#c39bff", icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 5.5a6.5 6.5 0 0 1 0 13a4.3 4.3 0 0 1 0-8.6a2.2 2.2 0 0 1 0 4.4"/>' },
     { id: "restrained",    name: "Restrained",    col: "#d6d6e4", icon: '<rect x="2.5" y="9" width="10" height="6" rx="3"/><rect x="11.5" y="9" width="10" height="6" rx="3"/>' },
     { id: "grappled",      name: "Grappled",      col: "#86d45c", icon: '<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V5.5a1.5 1.5 0 0 1 3 0V13a6 6 0 0 1-6 6h-1a5 5 0 0 1-4-2l-3-4a1.5 1.5 0 0 1 2.5-1.7L8 13"/>' },
+    { id: "frightened",    name: "Frightened",    col: "#b48cff", icon: '<path d="M6 20V10a6 6 0 0 1 12 0v10l-2-2-2 2-2-2-2 2-2-2z"/><circle cx="10" cy="10" r=".9"/><circle cx="14" cy="10" r=".9"/><path d="M10 14.5q2-1.6 4 0"/>' },
     { id: "charmed",       name: "Charmed",       col: "#ff8cc6", icon: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/>' },
     { id: "blinded",       name: "Blinded",       col: "#e8e8e8", icon: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/>' },
-    { id: "invisible",     name: "Invisible",     col: "#c8f2ff", icon: '<circle cx="12" cy="7.5" r="3.2" stroke-dasharray="2.2 1.8"/><path d="M5 20.5a7 7 0 0 1 14 0" stroke-dasharray="2.2 1.8"/>' },
-    { id: "raging",        name: "Raging",        col: "#ff6a2a", icon: '<path d="M12 2.5c1 4 6.5 6 6.5 11.5a6.5 6.5 0 0 1-13 0c0-3 2-4.5 2-7.5 2 1 3 3 3 5.2 1-2.2 1.5-6.2 1.5-9.2z"/>' },
     { id: "poisoned",      name: "Poisoned",      col: "#8de05a", icon: '<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4a2 2 0 0 0 1.8-3l-5-9V3"/><path d="M7.2 15h9.6"/>' },
     { id: "exhaustion",    name: "Exhaustion",    col: "#e0aa6a", icon: '<path d="M6.5 3h11M6.5 21h11M8 3c0 5.5 8 6 8 9s-8 3.5-8 9M16 3c0 5.5-8 6-8 9s8 3.5 8 9"/>' },
-    { id: "concentrating", name: "Concentrating", col: "#8cc4ff", icon: '<path d="M12 3l9 9-9 9-9-9z"/><circle cx="12" cy="12" r="2.6"/>' },
-    { id: "incapacitated", name: "Incapacitated", col: "#ff8a80", icon: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>' },
     { id: "prone",         name: "Prone",         col: "#f0c890", icon: '<circle cx="5" cy="13" r="2.2"/><path d="M8.5 14.5h12M10.5 14.5v4.5M17.5 14.5v4.5"/>' },
     { id: "silenced",      name: "Silenced",      col: "#d8c4ff", icon: '<path d="M5.5 4h13a2.5 2.5 0 0 1 2.5 2.5v7a2.5 2.5 0 0 1-2.5 2.5h-7l-5 3.6v-3.6a2.5 2.5 0 0 1-2.5-2.5v-7A2.5 2.5 0 0 1 5.5 4z"/><path d="M9 7.5l6 6M15 7.5l-6 6"/>' },
     { id: "deafened",      name: "Deafened",      col: "#e8e8e8", icon: '<path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6"/>' },
-    { id: "unconscious",   name: "Unconscious",   col: "#a9b8ff", icon: '<path d="M4 7h6.5L4 14h6.5M13 11.5h6L13 18h6"/>' },
+    { id: "invisible",     name: "Invisible",     col: "#c8f2ff", icon: '<circle cx="12" cy="7.5" r="3.2" stroke-dasharray="2.2 1.8"/><path d="M5 20.5a7 7 0 0 1 14 0" stroke-dasharray="2.2 1.8"/>' },
+    { id: "raging",        name: "Raging",        col: "#ff6a2a", icon: '<path d="M12 2.5c1 4 6.5 6 6.5 11.5a6.5 6.5 0 0 1-13 0c0-3 2-4.5 2-7.5 2 1 3 3 3 5.2 1-2.2 1.5-6.2 1.5-9.2z"/>' },
+    { id: "concentrating", name: "Concentrating", col: "#8cc4ff", icon: '<path d="M12 3l9 9-9 9-9-9z"/><circle cx="12" cy="12" r="2.6"/>' },
   ];
   var BY = {}; C.forEach(function (c, i) { c.rank = i; BY[c.id] = c; });
   var FX = { banished: 1, petrified: 1, paralyzed: 1, stunned: 1, frightened: 1, restrained: 1, grappled: 1, charmed: 1, blinded: 1, invisible: 1, raging: 1, poisoned: 1, exhaustion: 1, incapacitated: 1, prone: 1, unconscious: 1, deafened: 1, silenced: 1 };
@@ -310,6 +311,8 @@
   function apply(f, s, t, list, opt) {
     opt = opt || {};
     list = norm(list);
+    // one condition on screen at a time: the DM's pick, otherwise the most dire
+    if (list.length > 1) list = [featured(list) || list[0]];
     var key = s.id || "x", now = Date.now(), prev = MEM[key] || { starts: {}, list: [] }, starts = {};
     list.forEach(function (x) { starts[x.id] = prev.starts[x.id] || now; });
     MEM[key] = { starts: starts, list: list };
