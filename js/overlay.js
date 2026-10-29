@@ -596,7 +596,7 @@
       var cardVid = p.cardVideo === false ? "" : (p.cardVideo || p.video || "");
       if (cardVid) {
         face.innerHTML = '<div class="portrait vid intro"><video src="' + esc(cardVid) + '" muted autoplay loop playsinline' +
-          (p.art ? ' poster="' + esc(p.art) + '"' : '') + '></video><i class="sweep"></i></div>';
+          (p.art ? ' poster="' + esc(p.art) + '"' : '') + '></video><i class="glow"></i><i class="sweep"></i></div>';
         var pv = face.querySelector(".portrait");
         // open wide on the waist-up shot, then push in to head and shoulders once the card has landed
         setTimeout(function () { pv.classList.remove("intro"); }, 900);

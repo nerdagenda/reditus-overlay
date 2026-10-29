@@ -6,7 +6,7 @@
    ========================================================================== */
 
 window.REDITUS = {
-  "build": 3,
+  "build": 4,
   "show": {
     "episode": 113,
     "schedule": "Every Tuesday @ 8:00PM EST"
