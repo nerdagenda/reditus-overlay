@@ -196,6 +196,24 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .fsyes { background: linear-gradient(180deg, #2f6a3a, #143018); border-color: #8fe08f; color: #fff; }
 .fsno { background: linear-gradient(180deg, #c81e28, #6e0b13); border-color: #ff8a80; color: #fff; }
 .fshint { font-size: 17px; color: var(--muted); margin: 20px 0 0; }
+[data-mode="setup"] .live-only, [data-mode="help"] .live-only { display: none !important; }
+.arrange { display: inline-flex; gap: 6px; }
+.lmain { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; }
+.lmain > .obsbar, .rail > .obsbar { margin-bottom: 0; }
+.live.flip { grid-template-columns: minmax(0, 1fr) minmax(380px, 470px); }
+.live.flip .rail { order: 2; }
+.rail .obsbar { grid-template-columns: minmax(0, 1fr); }
+.rail .obsbar .obsnow { padding: 2px 10px; }
+.rail .obsbar .oscene { flex: 1 1 calc(50% - 8px); }
+/* arranging */
+.arranging [data-panel] { position: relative; outline: 2px dashed rgba(233, 185, 121, .55); outline-offset: 3px; cursor: grab; }
+.arranging [data-panel] > * { pointer-events: none; }
+.arranging [data-panel]::before { content: "⠿ drag"; position: absolute; z-index: 6; top: 6px; right: 8px; font-size: 13px; font-weight: 700; letter-spacing: .04em; color: #1c1205; background: var(--gold-hi); padding: 3px 8px; pointer-events: none; }
+.arranging [data-panel].dragging { opacity: .35; }
+.arranging .dzone { outline: 1px solid transparent; min-height: 120px; }
+.arranging .dzone.can { outline-color: rgba(110, 224, 122, .5); }
+.arranging .dzone.cant { outline-color: rgba(255, 107, 107, .5); }
+.dropline { height: 6px; background: var(--gold-hi); box-shadow: 0 0 12px var(--gold-hi); border-radius: 3px; }
 .obsbar { display: grid; grid-template-columns: minmax(230px, 280px) minmax(0, 1fr); gap: 14px; align-items: stretch; background: var(--panel); border: 1px solid var(--line); padding: 12px; margin-bottom: 14px; }
 .obsnow { display: grid; align-content: center; gap: 2px; padding: 4px 12px; border-left: 6px solid #c81e28; }
 .obsnow small { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -289,6 +307,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     <button role="tab" id="m-help" data-m="help" aria-selected="false">Help</button>
   </div>
   <span class="status" id="status">Loading…</span>
+  <span class="arrange live-only"><button class="btn small" id="b-arrange" type="button" title="Drag the Live panels into the order you like">Arrange</button><button class="btn small" id="b-flip" type="button" hidden>⇆ Flip sides</button><button class="btn small" id="b-lreset" type="button" hidden>Reset</button></span>
   <button class="btn setup-only" id="b-revert" type="button">Discard changes</button>
   <button class="btn primary setup-only" id="b-publish" type="button" disabled>Publish to stream</button>
   <button class="btn small setup-only" id="b-token" type="button" title="GitHub access for publishing">GitHub key</button>
@@ -296,20 +315,20 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
 <!-- LIVE: what the DM changes mid-game. Everything here goes to the stream in a few seconds, no Publish. -->
 <div class="live mode" id="mode-live">
- <div class="rail">
-  <div class="conn" id="conn"><i></i><span id="conn-t">Connecting to the stream…</span></div>
-  <div class="switches">
+ <div class="rail dzone" data-zone="rail">
+  <div class="conn dpanel" id="conn" data-panel="conn"><i></i><span id="conn-t">Connecting to the stream…</span></div>
+  <div class="switches dpanel" id="switches" data-panel="switches">
     <button type="button" class="switch" id="b-battle" aria-pressed="false"><b>⚔ Battle mode</b><span>Off · HP bars hidden</span></button>
     <button type="button" class="switch map" id="b-mapbars" aria-pressed="true"><b>🗺 Map HP bars</b><span>On · battle map screen only</span></button>
   </div>
-  <div class="panel fold" id="yt-panel" data-fold="yt">
+  <div class="panel fold dpanel" id="yt-panel" data-fold="yt" data-panel="yt">
     <button type="button" class="phead" aria-expanded="true"><h2>YouTube</h2><span class="ytstate" id="yt-state">Checking…</span><span class="chev">▾</span></button>
     <div class="pbody">
       <div class="ytbox" id="yt-box"><div class="ytmsg" id="yt-msg">Checking if the channel is live…</div></div>
       <div class="ythint">The stream as viewers see it, muted, about 10 to 30 seconds behind. Checks every minute.</div>
     </div>
   </div>
-  <div class="panel fold" id="talk-panel" data-fold="talk">
+  <div class="panel fold dpanel" id="talk-panel" data-fold="talk" data-panel="talk">
     <button type="button" class="phead" aria-expanded="true"><h2>Conversation</h2><span class="ytstate" id="talk-mini"></span><span class="chev">▾</span></button>
     <div class="pbody">
     <div class="talkgrid" id="talk-grid" role="group" aria-label="Pick two characters"></div>
@@ -320,13 +339,15 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     </div>
   </div>
  </div>
-  <div>
-    <div class="obsbar" id="obsbar">
+  <div class="lmain dzone" data-zone="main">
+    <div class="obsbar dpanel" id="obsbar" data-panel="obs">
       <div class="obsnow"><small>On stream now</small><b id="obs-now">…</b><span id="obs-link">Checking OBS…</span></div>
       <div class="obsscenes" id="obs-scenes" role="group" aria-label="OBS scenes"></div>
     </div>
+    <div class="dpanel" id="party-panel" data-panel="party" data-only="main">
     <h2 style="margin:4px 0 10px">Party · HP &amp; conditions</h2>
     <div class="lp" id="live-party"></div>
+    </div>
   </div>
 </div>
 
@@ -939,7 +960,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var cn = $("conn"), ct = $("conn-t");
     if (cn && !cn.querySelector(".keyin")) {
       var bad = !relayUrl() || hpErr || !hpKey;
-      cn.className = "conn " + (bad ? "bad" : LIVE.seen ? "ok" : "");
+      cn.className = "conn dpanel " + (bad ? "bad" : LIVE.seen ? "ok" : "");
       ct.textContent = !relayUrl() ? "No HP relay set up yet: see Setup → Show & GM." : !hpKey ? "Enter the relay key to control the stream from this computer:" : hpErr ? hpErr : LIVE.seen ? "Connected to the stream · changes go live in a few seconds" : "Connecting…";
       if (!hpKey && relayUrl()) {
         var k = document.createElement("div"); k.className = "keyin";
@@ -1217,10 +1238,71 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     });
   }
 
+  /* ---------- LIVE: arrange panels (drag, only while Arrange is on; saved on this computer) ---------- */
+  var LAYOUT_DEF = { rail: ["conn", "switches", "yt", "talk"], main: ["obs", "party"], flip: false };
+  var ARR = { on: false, drag: null, line: null };
+  function panelEl(id) { return document.querySelector('[data-panel="' + id + '"]'); }
+  function zoneEl(z) { return document.querySelector('.dzone[data-zone="' + z + '"]'); }
+  function readLayout() { try { var l = JSON.parse(LS.get("reditus-live-layout") || "null"); if (l && l.rail && l.main) return l; } catch (e) {} return null; }
+  function applyLayout(l) {
+    l = l || LAYOUT_DEF;
+    var seen = {};
+    ["rail", "main"].forEach(function (z) {
+      (l[z] || []).forEach(function (id) {
+        var e = panelEl(id); if (!e || seen[id]) return;
+        if (z === "rail" && e.getAttribute("data-only") === "main") return;   // never squeeze the party grid into the side column
+        seen[id] = 1; zoneEl(z).appendChild(e);
+      });
+    });
+    // anything missing (new panels) goes back to its default column
+    ["rail", "main"].forEach(function (z) { LAYOUT_DEF[z].forEach(function (id) { if (!seen[id]) { var e = panelEl(id); if (e) zoneEl(z).appendChild(e); } }); });
+    $("mode-live").classList.toggle("flip", !!l.flip);
+    tfit();
+  }
+  function saveLayout() {
+    var l = { flip: $("mode-live").classList.contains("flip") };
+    ["rail", "main"].forEach(function (z) { l[z] = Array.prototype.map.call(zoneEl(z).querySelectorAll(":scope > [data-panel]"), function (e) { return e.getAttribute("data-panel"); }); });
+    LS.set("reditus-live-layout", JSON.stringify(l));
+  }
+  function setArrange(on) {
+    ARR.on = on; $("mode-live").classList.toggle("arranging", on);
+    $("b-arrange").textContent = on ? "Done arranging" : "Arrange"; $("b-arrange").classList.toggle("primary", on);
+    $("b-flip").hidden = $("b-lreset").hidden = !on;
+    Array.prototype.forEach.call(document.querySelectorAll("[data-panel]"), function (e) { e.draggable = on; });
+    if (on) status("Drag panels by their gold tag. Press Done arranging when finished.", "warn"); else status("Layout saved on this computer.", "good");
+  }
+  function clearDrop() { if (ARR.line) { ARR.line.remove(); ARR.line = null; } Array.prototype.forEach.call(document.querySelectorAll(".dzone"), function (z) { z.classList.remove("can", "cant"); }); }
+  function allowed(panel, zone) { return !(panel.getAttribute("data-only") && panel.getAttribute("data-only") !== zone.getAttribute("data-zone")); }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-panel]"), function (e) {
+    e.addEventListener("dragstart", function (ev) { if (!ARR.on) { ev.preventDefault(); return; } ARR.drag = e; e.classList.add("dragging"); ev.dataTransfer.effectAllowed = "move"; try { ev.dataTransfer.setData("text/plain", e.getAttribute("data-panel")); } catch (x) {} });
+    e.addEventListener("dragend", function () { e.classList.remove("dragging"); ARR.drag = null; clearDrop(); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".dzone"), function (z) {
+    z.addEventListener("dragover", function (ev) {
+      if (!ARR.on || !ARR.drag) return;
+      Array.prototype.forEach.call(document.querySelectorAll(".dzone"), function (o) { o.classList.remove("can", "cant"); });
+      if (!allowed(ARR.drag, z)) { z.classList.add("cant"); if (ARR.line) { ARR.line.remove(); ARR.line = null; } return; }
+      ev.preventDefault(); ev.dataTransfer.dropEffect = "move"; z.classList.add("can");
+      var kids = Array.prototype.filter.call(z.querySelectorAll(":scope > [data-panel]"), function (k) { return k !== ARR.drag; }), before = null;
+      for (var i = 0; i < kids.length; i++) { var r = kids[i].getBoundingClientRect(); if (ev.clientY < r.top + r.height / 2) { before = kids[i]; break; } }
+      if (!ARR.line) { ARR.line = document.createElement("div"); ARR.line.className = "dropline"; }
+      if (before) z.insertBefore(ARR.line, before); else z.appendChild(ARR.line);
+    });
+    z.addEventListener("drop", function (ev) {
+      if (!ARR.on || !ARR.drag || !allowed(ARR.drag, z)) return; ev.preventDefault();
+      if (ARR.line && ARR.line.parentNode === z) z.insertBefore(ARR.drag, ARR.line); else z.appendChild(ARR.drag);
+      clearDrop(); saveLayout(); tfit();
+    });
+  });
+  $("b-arrange").addEventListener("click", function () { setArrange(!ARR.on); });
+  $("b-flip").addEventListener("click", function () { $("mode-live").classList.toggle("flip"); saveLayout(); });
+  $("b-lreset").addEventListener("click", function () { LS.set("reditus-live-layout", null); applyLayout(LAYOUT_DEF); status("Layout reset.", "good"); });
+  applyLayout(readLayout());
+
   /* ---------- modes ---------- */
   var MODE = "live";
   function setMode(m) {
-    MODE = m; LS.set("reditus-mode", m);
+    MODE = m; LS.set("reditus-mode", m); if (m !== "live" && ARR.on) setArrange(false);
     document.body.setAttribute("data-mode", m);
     ["live", "setup", "help"].forEach(function (x) { $("mode-" + x).hidden = x !== m; $("m-" + x).setAttribute("aria-selected", x === m ? "true" : "false"); });
     if (m === "setup" && !pv.src) reloadPreview();
