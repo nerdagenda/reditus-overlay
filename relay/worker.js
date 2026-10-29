@@ -8,7 +8,8 @@
 
    Battle mode + manual HP (optional, needs a KV namespace bound as HP and a secret ADMIN_KEY):
    POST /state  (header  Authorization: Bearer <ADMIN_KEY>)
-     { "battle": true }                                   → bars on / off
+     { "battle": true }                                   → bars on / off (every screen except the battle map)
+     { "mapBars": false }                                 → bars on / off on the battle map only (default on)
      { "manual": { "felix": { "current": 40, "temp": 0 } } } → override one character's HP
      { "manual": { "felix": null } }                       → back to D&D Beyond
    GET /hp also returns { battle, manual } so the overlay picks changes up on its next check. */
@@ -34,6 +35,7 @@ export default {
       let body; try { body = await req.json(); } catch (e) { return json({ error: "bad json" }, 400); }
       const st = await readState(env);
       if (typeof body.battle === "boolean") st.battle = body.battle;
+      if (typeof body.mapBars === "boolean") st.mapBars = body.mapBars;
       if (body.manual && typeof body.manual === "object") {
         Object.keys(body.manual).slice(0, 20).forEach((k) => {
           const v = body.manual[k];
@@ -58,7 +60,7 @@ export default {
       catch (e) { chars[id] = { error: String(e && e.message || e) }; }
     }));
     const st = await stP;
-    return json({ t: Date.now(), battle: st ? !!st.battle : null, manual: st ? st.manual : {}, chars });
+    return json({ t: Date.now(), battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, manual: st ? st.manual : {}, chars });
   },
 };
 

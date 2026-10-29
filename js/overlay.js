@@ -309,12 +309,16 @@
   var HP = {};       // ddb id → { max, current, temp, deathSaves } from the relay
   var MANUAL = {};   // party id → { current, temp, max } set from the control panel's Battle tab
   var BATTLE = null; // battle mode from the relay (null = relay has no storage; fall back to data.js)
+  var MAPBARS = null; // battle-map screen has its own switch, on unless turned off
   var HPSHOWN = {};  // party id → HP last drawn, so a change can be animated
   var HPBARS = [];   // bars on screen right now
   var HPSIG = "";
   function ddbId(p) { var t = String((p && p.ddb) || ""), m = t.match(/characters\/(\d+)/) || t.match(/^\s*(\d{3,12})\s*$/); return m ? m[1] : ""; }
   function hpCfg() { return (D && D.hpRelay) || {}; }
-  function battleOn() { return BATTLE != null ? BATTLE : !!hpCfg().battle; }
+  function battleOn() {
+    if (SCENE === "map") return MAPBARS != null ? MAPBARS : hpCfg().mapBars !== false;
+    return BATTLE != null ? BATTLE : !!hpCfg().battle;
+  }
   function hpOn() { var c = hpCfg(); return !!c.url && c.bars !== false && battleOn(); }
   function hpFor(p) {
     if (!p) return null;
@@ -367,6 +371,7 @@
     fetch(u, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j) return;
       HP = j.chars || {}; MANUAL = j.manual || {}; BATTLE = typeof j.battle === "boolean" ? j.battle : null;
+      MAPBARS = typeof j.mapBars === "boolean" ? j.mapBars : null;
       // battle switched or someone gained/lost a bar → rebuild the screen; otherwise just animate the bars
       var sig = hpOn() + "|" + (D.party || []).filter(hpEligible).map(function (p) { return p.id; }).join(",");
       if (sig !== HPSIG) { HPSIG = sig; render(); }

@@ -96,6 +96,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   <h1>Reditus Overlay · Control Panel</h1>
   <span class="status" id="status">Loading…</span>
   <button class="btn battle" id="b-battle" type="button" aria-pressed="false" title="Turns the HP bars on or off on stream, instantly">⚔ Battle mode: off</button>
+  <button class="btn battle" id="b-mapbars" type="button" aria-pressed="true" title="HP bars on the battle map screen only (separate from battle mode)">🗺 Map HP bars: on</button>
   <button class="btn" id="b-revert" type="button">Discard changes</button>
   <button class="btn primary" id="b-publish" type="button" disabled>Publish to stream</button>
   <button class="btn small" id="b-token" type="button" title="GitHub access for publishing">GitHub key</button>
@@ -357,7 +358,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
   /* ---------- Battle / HP (talks to the relay directly: changes show on stream within seconds, no Publish needed) ---------- */
   var hpKey = LS.get("reditus-hp-key") || "";
-  var LIVE = { chars: {}, manual: {}, battle: null }, hpPending = {}, hpSendTimer = null, hpErr = "";
+  var LIVE = { chars: {}, manual: {}, battle: null, mapBars: true }, hpPending = {}, hpSendTimer = null, hpErr = "";
   function relayUrl() { return S && S.hpRelay && S.hpRelay.url ? S.hpRelay.url.replace(/\/+$/, "") : ""; }
   function ddbOf(p) { var t = String(p.ddb || ""), m = t.match(/characters\/(\d+)/) || t.match(/^\s*(\d{3,12})\s*$/); return m ? m[1] : ""; }
   function hpOf(p) {
@@ -370,7 +371,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var u = relayUrl(); if (!u || !S) return;
     var ids = S.party.map(ddbOf).filter(Boolean);
     fetch(u + "/hp?ids=" + ids.join(",") + "&t=" + Date.now()).then(function (r) { return r.json(); }).then(function (j) {
-      LIVE.chars = j.chars || {}; LIVE.battle = typeof j.battle === "boolean" ? j.battle : null;
+      LIVE.chars = j.chars || {}; LIVE.battle = typeof j.battle === "boolean" ? j.battle : null; LIVE.mapBars = j.mapBars !== false;
       // keep values we're still sending, so the numbers don't jump back while a click is in flight
       LIVE.manual = Object.assign({}, j.manual || {}, hpPending);
       hpErr = LIVE.battle === null ? "The relay has no storage yet (KV not bound), so battle mode and manual HP can't be saved." : "";
@@ -384,10 +385,11 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     if (!hpKey) { status("Add the relay key in the Battle / HP tab first.", "bad"); $("tab-battle").click(); return Promise.reject(); }
     return fetch(u + "/state", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + hpKey }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
-      .then(function (j) { LIVE.battle = j.state.battle; status("Sent to the stream.", "good"); paintBattle(); return j; })
+      .then(function (j) { LIVE.battle = j.state.battle; LIVE.mapBars = j.state.mapBars !== false; status("Sent to the stream.", "good"); paintBattle(); return j; })
       .catch(function (e) { if (e) status("Relay said: " + e.message, "bad"); });
   }
   $("b-battle").addEventListener("click", function () { sendState({ battle: !LIVE.battle }); });
+  $("b-mapbars").addEventListener("click", function () { sendState({ mapBars: !LIVE.mapBars }); });
   function setHp(p, cur, temp) {
     var h = hpOf(p);
     var v = { current: Math.max(0, Math.min(h.max, Math.round(cur))), temp: Math.max(0, Math.round(temp == null ? h.temp : temp)), max: h.max };
@@ -403,7 +405,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function renderBattle() {
     var root = $("s-battle"); root.innerHTML = "";
     var c = document.createElement("div"); c.className = "card";
-    c.innerHTML = "<h3>Battle mode</h3><p class=\"hint\">The <b>⚔ Battle mode</b> button at the top turns the HP bars on and off on stream. It takes effect in a few seconds, with no Publish needed. Outside battle mode the bars stay hidden.</p>";
+    c.innerHTML = "<h3>Battle mode</h3><p class=\"hint\">The <b>⚔ Battle mode</b> button at the top turns the HP bars on and off on stream. It takes effect in a few seconds, with no Publish needed. Outside battle mode the bars stay hidden.</p><p class=\"hint\">The <b>battle map screen</b> has its own switch, <b>🗺 Map HP bars</b>, which is on by default and ignores battle mode.</p>";
     var g = document.createElement("div"); g.className = "grid";
     var kf = field("Relay key (saved on this computer only)", hpKey, function (v) { hpKey = v.trim(); LS.set("reditus-hp-key", hpKey || null); }, { id: "h-key", type: "password" });
     g.appendChild(kf); c.appendChild(g);
@@ -435,6 +437,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var bb = $("b-battle");
     bb.setAttribute("aria-pressed", LIVE.battle ? "true" : "false");
     bb.textContent = "⚔ Battle mode: " + (LIVE.battle ? "ON" : "off");
+    var mb = $("b-mapbars"); mb.setAttribute("aria-pressed", LIVE.mapBars ? "true" : "false"); mb.textContent = "🗺 Map HP bars: " + (LIVE.mapBars ? "on" : "off");
     var st = $("hp-state");
     if (st) st.textContent = !relayUrl() ? "No relay address yet. Add it in Show & GM → Live HP bars." : hpErr || (LIVE.battle ? "Battle mode is ON. HP bars are showing on stream." : "Battle mode is off.");
     if (!S) return;
