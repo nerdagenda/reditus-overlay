@@ -94,6 +94,105 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .pv-bar { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; margin-bottom: 10px; font-size: 13px; color: var(--muted); }
 .pv-bar select { background: var(--panel); border: 1px solid var(--line); padding: 6px 8px; }
 
+/* ---- modes ---- */
+.modes { display: inline-flex; border: 1px solid var(--line); background: var(--panel); }
+.modes button { background: none; border: 0; padding: 9px 16px; cursor: pointer; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.modes button[aria-selected="true"] { background: linear-gradient(180deg, #2a2112, #120d06); color: var(--gold-hi); box-shadow: inset 0 -2px 0 var(--gold); }
+.modes button .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff5a4f; margin-right: 7px; vertical-align: 1px; box-shadow: 0 0 6px #ff5a4f; }
+[data-mode="live"] .setup-only, [data-mode="help"] .setup-only { display: none !important; }
+.mode[hidden] { display: none !important; }
+
+/* ---- LIVE mode: built for a 17" 1080p laptop beside the stream, read from ~3 ft — big type, big targets, everything on one screen ----
+   left rail: connection, the two switches, conversation picker · right: party grid (3 across at 1920) */
+.live { --lf: 17px; font-size: var(--lf); max-width: 1900px; margin: 0 auto; padding: 16px max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left));
+  display: grid; grid-template-columns: minmax(380px, 470px) minmax(0, 1fr); gap: 18px; align-items: start; }
+.live .rail { display: grid; gap: 14px; position: sticky; top: 76px; }
+@media (max-width: 1100px) { .live { grid-template-columns: minmax(0, 1fr); } .live .rail { position: static; } }
+.live h2 { font-family: var(--display); font-size: 17px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-hi); margin: 0 0 12px; font-weight: 600; }
+.live .panel { background: var(--panel); border: 1px solid var(--line); padding: 16px; }
+.conn { display: flex; align-items: center; gap: 12px; font-size: 16px; color: var(--muted); flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); padding: 12px 16px; }
+.conn i { width: 14px; height: 14px; border-radius: 50%; background: var(--warn); flex: none; }
+.conn > span { flex: 1 1 0; min-width: 0; }
+.conn.ok i { background: var(--good); box-shadow: 0 0 10px var(--good); } .conn.bad i { background: var(--bad); box-shadow: 0 0 10px var(--bad); }
+.conn .keyin { display: flex; gap: 8px; flex: 1 1 100%; }
+.conn .keyin input { flex: 1; min-width: 0; background: #071230; border: 1px solid var(--warn); padding: 10px; font-size: 16px; }
+.switches { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.switch { display: grid; gap: 4px; text-align: left; padding: 18px 20px; min-height: 96px; cursor: pointer; background: var(--panel-2); border: 2px solid var(--line); }
+.switch b { font-size: 26px; letter-spacing: .02em; } .switch span { font-size: 16px; color: var(--muted); }
+.switch:hover { border-color: var(--gold); }
+.switch[aria-pressed="true"] { background: linear-gradient(180deg, #c81e28, #6e0b13); border-color: #ff8a80; box-shadow: 0 0 22px rgba(255, 60, 60, .45); }
+.switch[aria-pressed="true"] span { color: #ffe1de; }
+.switch.map[aria-pressed="true"] { background: linear-gradient(180deg, #2f6a3a, #143018); border-color: #8fe08f; box-shadow: 0 0 18px rgba(120, 230, 120, .3); }
+.switch.map[aria-pressed="true"] span { color: #dcf7dc; }
+.talkgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.tpick { position: relative; display: grid; justify-items: center; gap: 6px; padding: 10px 4px; background: var(--panel-2); border: 2px solid var(--line); cursor: pointer; font-size: 15px; min-width: 0; }
+.tpick span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tpick img, .tpick .gmface { width: 62px; height: 62px; object-fit: cover; border: 1px solid var(--gold); background: #071230; display: grid; place-items: center; font-family: var(--display); color: var(--gold-hi); font-size: 22px; }
+.tpick:hover { border-color: var(--gold); }
+.tpick[data-side] { border-color: var(--gold-hi); background: linear-gradient(180deg, #3a2c14, #120d06); }
+.tpick[data-side]::after { content: attr(data-side); position: absolute; top: 5px; left: 5px; font-size: 13px; font-weight: 700; color: #1c1205; background: var(--gold-hi); padding: 2px 7px; }
+.tpick.onair::before { content: "ON AIR"; position: absolute; top: 5px; right: 5px; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: #fff; background: #c81e28; padding: 2px 5px; }
+.talkbar { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 12px; }
+.btn.big { padding: 14px 18px; font-size: 18px; min-height: 58px; }
+.talkstate { font-size: 16px; color: var(--muted); margin-top: 10px; line-height: 1.45; } .talkstate b { color: var(--text); }
+.talkstate .pend { color: var(--gold-hi); font-weight: 600; }
+.lp { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(318px, 1fr)); }
+.lpc { min-width: 0; position: relative; background: var(--panel); border: 1px solid var(--line); padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; }
+.lpc.picking { z-index: 5; border-color: var(--gold); }
+.lpc.down { border-color: #ff6b6b; box-shadow: inset 0 0 0 1px #ff6b6b; }
+.lph { display: flex; align-items: center; gap: 14px; }
+.lph img { width: 50px; height: 50px; object-fit: cover; border: 1px solid var(--gold); flex: none; background: #071230; }
+.lph .nm { flex: 1; min-width: 0; } .lph .nm b { display: block; font-size: 19px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lph .nm small { color: var(--muted); font-size: 14px; } .lph .nm small.man { color: #ffb86b; }
+.lph .hpnum { font-size: 34px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1; text-align: right; white-space: nowrap; }
+.lph .hpnum small { font-size: 18px; color: var(--muted); font-weight: 500; } .lph .hpnum .tmp { color: #7fc8ff; font-size: 18px; }
+.lpbar { height: 16px; background: #2a0a10; border: 1px solid #c9a063; position: relative; overflow: hidden; }
+.lpbar i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8e0e17, #ff5a4f); transition: width .3s; } .lpbar i.t { background: #3a9cd8; }
+.lpbtns { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 7px; }
+.lpbtns .btn { padding: 0; font-size: 18px; font-weight: 700; min-height: 50px; }
+.lpbtns .dmg { color: #ff9c94; background: #2a0d14; } .lpbtns .heal { color: #9ee89e; background: #0d2a16; }
+.lpamt { display: grid; grid-template-columns: minmax(64px, 1fr) auto auto auto; gap: 6px; }
+.lpamt input { background: #071230; border: 1px solid var(--line); padding: 8px 10px; font-size: 18px; min-width: 0; }
+.lpamt .btn { min-height: 48px; font-weight: 600; font-size: 15px; padding: 0 10px; }
+.lpamt .dmg { color: #ff9c94; } .lpamt .heal { color: #9ee89e; }
+.lpmore { display: flex; flex-wrap: wrap; gap: 7px; }
+.lpmore .btn { font-size: 13px; padding: 7px 9px; }
+.lpconds { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.lpconds .none { color: var(--muted); font-size: 15px; }
+.lpconds .cchip { font-size: 15px; padding: 7px 12px 7px 8px; }
+.lpconds .cchip svg { width: 24px; height: 24px; }
+.lpconds .addc { border-style: dashed; color: var(--gold-hi); font-weight: 600; }
+/* condition picker pops over the card below so the grid never jumps */
+.cpick { position: absolute; left: -1px; right: -1px; top: calc(100% - 2px); z-index: 6; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;
+  background: #0a1838; border: 1px solid var(--gold); border-top: 0; padding: 10px 12px 12px; box-shadow: 0 18px 40px rgba(0, 0, 0, .7); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cpick[hidden] { display: none; }
+.cpick .cchip { justify-content: flex-start; padding: 7px 8px 7px 7px; font-size: 14.5px; border-radius: 6px; min-height: 48px; min-width: 0; }
+.cpick .cchip span { line-height: 1.15; text-align: left; }
+.cpick .cchip svg { width: 26px; height: 26px; flex: none; }
+@media (max-width: 520px) { .lp { grid-template-columns: minmax(0, 1fr); } .lpbtns { grid-template-columns: repeat(3, minmax(0, 1fr)); } .lpamt { grid-template-columns: 1fr 1fr 1fr; } .lpamt input { grid-column: 1 / -1; } .cpick { grid-template-columns: 1fr 1fr; } }
+
+/* ---- tooltips (Setup) ---- */
+.tip { display: inline-grid; place-items: center; width: 17px; height: 17px; margin-left: 6px; border-radius: 50%; border: 1px solid var(--line); background: #071230; color: var(--gold-hi);
+  font-size: 11px; font-weight: 700; cursor: help; position: relative; vertical-align: 1px; text-transform: none; letter-spacing: 0; padding: 0; }
+.tip:hover, .tip:focus-visible { border-color: var(--gold); }
+.tip:hover::after, .tip:focus-visible::after { content: attr(data-tip); position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: max-content; max-width: 280px;
+  background: #050c22; border: 1px solid var(--gold); color: var(--text); padding: 8px 10px; font-size: 12.5px; line-height: 1.45; font-weight: 400; text-align: left; z-index: 30; box-shadow: 0 8px 24px rgba(0,0,0,.6); white-space: normal; }
+.chk .tip { margin-left: 2px; }
+
+/* ---- HELP mode ---- */
+.help { max-width: 820px; margin: 0 auto; padding: 18px max(16px, env(safe-area-inset-right)) 60px max(16px, env(safe-area-inset-left)); }
+.help .intro { color: var(--muted); margin: 0 0 14px; }
+.help details { background: var(--panel); border: 1px solid var(--line); margin-bottom: 8px; }
+.help summary { cursor: pointer; padding: 13px 16px; font-size: 15px; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 10px; }
+.help summary::-webkit-details-marker { display: none; }
+.help summary::before { content: "+"; color: var(--gold-hi); font-size: 18px; width: 14px; }
+.help details[open] summary::before { content: "–"; }
+.help details[open] summary { border-bottom: 1px solid var(--line); color: var(--gold-hi); }
+.help .body { padding: 10px 18px 14px; line-height: 1.6; }
+.help .body ol, .help .body ul { margin: 6px 0; padding-left: 20px; }
+.help code { background: #071230; padding: 1px 5px; font-size: 12.5px; }
+.help .grp { font-family: var(--display); color: var(--gold-hi); letter-spacing: .08em; text-transform: uppercase; font-size: 12px; margin: 18px 0 8px; }
+
 .dialog { position: fixed; inset: 0; background: rgba(2,6,18,.78); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
 .dialog[hidden] { display: none; }
 .dialog .box { background: var(--panel); border: 1px solid var(--gold); max-width: 560px; width: 100%; padding: 20px; }
@@ -104,33 +203,96 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .dialog .row { justify-content: flex-end; }
 </style>
 </head>
-<body>
+<body data-mode="live">
 <div class="top"><div class="in">
-  <h1>Reditus Overlay · Control Panel</h1>
+  <h1>Reditus Control</h1>
+  <div class="modes" role="tablist" aria-label="Mode">
+    <button role="tab" id="m-live" data-m="live" aria-selected="true"><span class="dot"></span>Live</button>
+    <button role="tab" id="m-setup" data-m="setup" aria-selected="false">Setup</button>
+    <button role="tab" id="m-help" data-m="help" aria-selected="false">Help</button>
+  </div>
   <span class="status" id="status">Loading…</span>
-  <button class="btn battle" id="b-battle" type="button" aria-pressed="false" title="Turns the HP bars on or off on stream, instantly">⚔ Battle mode: off</button>
-  <button class="btn battle" id="b-mapbars" type="button" aria-pressed="true" title="HP bars on the battle map screen only (separate from battle mode)">🗺 Map HP bars: on</button>
-  <button class="btn" id="b-revert" type="button">Discard changes</button>
-  <button class="btn primary" id="b-publish" type="button" disabled>Publish to stream</button>
-  <button class="btn small" id="b-token" type="button" title="GitHub access for publishing">GitHub key</button>
+  <button class="btn setup-only" id="b-revert" type="button">Discard changes</button>
+  <button class="btn primary setup-only" id="b-publish" type="button" disabled>Publish to stream</button>
+  <button class="btn small setup-only" id="b-token" type="button" title="GitHub access for publishing">GitHub key</button>
 </div></div>
 
-<div class="wrap">
+<!-- LIVE: what the DM changes mid-game. Everything here goes to the stream in a few seconds, no Publish. -->
+<div class="live mode" id="mode-live">
+ <div class="rail">
+  <div class="conn" id="conn"><i></i><span id="conn-t">Connecting to the stream…</span></div>
+  <div class="switches">
+    <button type="button" class="switch" id="b-battle" aria-pressed="false"><b>⚔ Battle mode</b><span>Off · HP bars hidden</span></button>
+    <button type="button" class="switch map" id="b-mapbars" aria-pressed="true"><b>🗺 Map HP bars</b><span>On · battle map screen only</span></button>
+  </div>
+  <div class="panel">
+    <h2>Conversation</h2>
+    <div class="talkgrid" id="talk-grid" role="group" aria-label="Pick two characters"></div>
+    <div class="talkbar">
+      <button type="button" class="btn big" id="talk-swap">⇄ Swap</button>
+      <button type="button" class="btn big primary" id="talk-apply">Apply to conversation scene</button>
+    </div>
+    <div class="talkstate" id="talk-state"></div>
+  </div>
+ </div>
+  <div>
+    <h2 style="margin:4px 0 10px">Party · HP &amp; conditions</h2>
+    <div class="lp" id="live-party"></div>
+  </div>
+</div>
+
+<!-- HELP -->
+<div class="help mode" id="mode-help" hidden>
+  <p class="intro">Quick answers. <b>Live</b> is for during the game: everything there reaches the stream in a few seconds. <b>Setup</b> is for building the stream: changes there need <b>Publish to stream</b> and take about a minute.</p>
+
+  <div class="grp">During a session</div>
+  <details open><summary>Start-of-session checklist</summary><div class="body"><ol>
+    <li>Open this page in <b>Live</b> mode. The dot at the top left should be green ("Connected").</li>
+    <li>Players open their camera link (the card they were sent) and type the group password.</li>
+    <li>Check each "… Cam" in OBS shows the right person. Cameras move into place by themselves.</li>
+    <li>Battle mode <b>off</b> to start.</li></ol></div></details>
+  <details><summary>Start a fight (show HP bars)</summary><div class="body">Press <b>⚔ Battle mode</b> so it turns red. HP bars and conditions appear on stream in a few seconds. Press it again after the fight. The <b>battle map</b> screen shows HP bars on its own (the green <b>🗺 Map HP bars</b> switch), even when battle mode is off.</div></details>
+  <details><summary>Change someone's HP</summary><div class="body"><ul>
+    <li>Normally HP follows the player's D&amp;D Beyond sheet by itself. Nothing to do.</li>
+    <li>To change it yourself: tap <b>−10 −5 −1</b> or <b>+1 +5 +10</b>, or type a number and press <b>Damage</b> / <b>Heal</b> / <b>Temp HP</b>. Enter = Damage.</li>
+    <li>Once you change it here, that character is on <b>Manual HP</b> (their sheet is ignored). Tap <b>Use sheet HP</b> to undo.</li></ul></div></details>
+  <details><summary>Add or remove a condition</summary><div class="body">Tap <b>＋ Condition</b> on the character, then tap the condition. Tap it again (or its chip with ✕) to remove it. It animates on and off on stream. <b>Exhaustion</b> goes up one level per tap (1–6, then off). Conditions marked <b>· sheet</b> come from the player's D&amp;D Beyond sheet; clear those on the sheet. They only show on stream while HP bars show.</div></details>
+  <details><summary>Show a conversation between two characters</summary><div class="body"><ol>
+    <li>In <b>Conversation</b>, tap the first character (L), then the second (R). <b>⇄ Swap</b> flips sides.</li>
+    <li>Press <b>Apply to conversation scene</b>. The tiles marked <b>ON AIR</b> are what's showing.</li>
+    <li>Switch OBS to your Conversation scene. Their cameras move into the two windows by themselves.</li></ol></div></details>
+  <details><summary>A player's camera is black</summary><div class="body">Their character animation shows instead, so the stream still looks fine. Ask them to open their camera link again; it reconnects to the same spot by itself. You don't need to change anything in OBS.</div></details>
+  <details><summary>The dot at the top is red</summary><div class="body"><ul>
+    <li><b>"Enter the relay key"</b>: type the relay key in the box there and press Save. Do it once per computer.</li>
+    <li><b>"Can't reach the relay"</b>: check the internet connection, then reload the page.</li></ul></div></details>
+
+  <div class="grp">Setting up (Setup mode)</div>
+  <details><summary>Add a new character</summary><div class="body">Setup → <b>Party</b> → bottom of the page. Paste their D&amp;D Beyond link (sheet set to Public) and press <b>Import character</b>. Everything fills in. Press <b>Publish to stream</b>. Then make their camera in OBS: a Browser Source named "<i>Name</i> Cam" with their VDO.Ninja link.</div></details>
+  <details><summary>A player is away for the session</summary><div class="body">Setup → <b>Party</b> → their card → untick <b>Camera window</b> (their window disappears and everyone else re-arranges), or tick <b>Cover camera with loop</b> to show their animated character in their window. Publish.</div></details>
+  <details><summary>Change the scrolling bar messages</summary><div class="body">Setup → <b>Scrolling bar</b>. Edit, add or reorder messages, then Publish.</div></details>
+  <details><summary>Publishing for the first time (GitHub key)</summary><div class="body">Setup → <b>GitHub key</b> (top right) and follow the steps in the box. Only needed once per computer. Live mode never needs it.</div></details>
+  <details><summary>OBS: cameras line up by themselves</summary><div class="body"><ol>
+    <li>OBS → <b>Tools → WebSocket Server Settings</b> → tick <b>Enable</b>, copy the password.</li>
+    <li>Every top-layer overlay link ends with <code>&amp;obs=YOURPASSWORD</code>.</li>
+    <li>Camera sources are named exactly <code>Trey Cam</code>, <code>Darius Cam</code>, <code>GM Cam</code>… and added to each scene as <b>Existing</b> sources.</li>
+    <li>Not working? Add <code>&amp;obsdebug=1</code> to the overlay link. A box in the corner says what's wrong.</li></ol></div></details>
+  <details><summary>Camera links (VDO.Ninja)</summary><div class="body">Each player has a permanent join link (on their card) and each "… Cam" source has a permanent view link ending in <code>#p=PASSWORD</code>. Set them once and never change them. Full details are in <b>Reditus_VDO_Ninja_Guide.pdf</b>.</div></details>
+</div>
+
+<div class="wrap mode" id="mode-setup" hidden>
   <main>
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-party" aria-selected="true" data-t="party">Party</button>
       <button role="tab" id="tab-ticker" aria-selected="false" data-t="ticker">Scrolling bar</button>
       <button role="tab" id="tab-show" aria-selected="false" data-t="show">Show &amp; GM</button>
       <button role="tab" id="tab-break" aria-selected="false" data-t="break">Break screen</button>
-      <button role="tab" id="tab-battle" aria-selected="false" data-t="battle">Battle / HP</button>
-      <button role="tab" id="tab-talk" aria-selected="false" data-t="talk">Conversation</button>
+
     </div>
     <section id="s-party"></section>
     <section id="s-ticker" hidden></section>
     <section id="s-show" hidden></section>
     <section id="s-break" hidden></section>
-    <section id="s-battle" hidden></section>
-    <section id="s-talk" hidden></section>
+
   </main>
 
   <aside class="preview">
@@ -203,10 +365,58 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       .catch(function (e) { status("Couldn't load data.js: " + e.message, "bad"); });
   }
 
+  /* ---------- tooltips: every Setup field with a ? explains itself ---------- */
+  var TIPS = {
+    "Nameplate": "Short name shown under this player's camera window, e.g. Trey. Also used to find their OBS camera (\u201cTrey Cam\u201d).",
+    "Full name (stat card)": "The full character name on their stat card in the scrolling bar.",
+    "Level": "Character level on the stat card. Comes from D&D Beyond automatically when a sheet is linked.",
+    "Race": "Shown on the stat card. Comes from D&D Beyond when a sheet is linked.",
+    "Class": "Shown on the stat card. Comes from D&D Beyond when a sheet is linked.",
+    "AC": "Armour Class badge on the stat card. Calculated from D&D Beyond when linked, so double-check it.",
+    "Max HP": "Heart badge on the stat card, and the max for the HP bar when there's no sheet.",
+    "Camera window": "Untick for someone who isn't on camera (e.g. a DM-played character). Their window disappears and the layout re-flows.",
+    "Transparent bottom loop": "Tick to stop this character's idle animation playing under their camera.",
+    "Cover camera with loop (top layer)": "Covers this player's camera with their animated character, e.g. when they step away. Needs Publish (about a minute).",
+    "Card in scrolling bar": "Show this character's stat card in the scrolling bar at the bottom.",
+    "Stats from D&D Beyond (auto)": "Level, race, class, AC, max HP and ability scores come from their sheet every minute. Untick to type them by hand.",
+    "Portrait image path": "Square picture on the stat card. A file in the overlay (assets/…) or a full web address.",
+    "Off-cam art path (optional)": "Still image shown when the camera is covered and there's no animation.",
+    "Off-cam animation (video path)": "Looping video for this character: plays under the camera, on the stat card, and when the camera is covered.",
+    "OBS camera source (optional)": "Only if the camera source in OBS isn't named \u201c<Nameplate> Cam\u201d. Type the exact OBS source name here.",
+    "D&D Beyond sheet link (live HP)": "Paste their D&D Beyond character link. The sheet must be set to Public. Drives live HP, conditions and stats.",
+    "Character card (seconds)": "How long each character card stays in the scrolling bar.",
+    "Message (seconds)": "How long each message stays in the scrolling bar.",
+    "Order": "How cards and messages take turns in the scrolling bar.",
+    "Characters between messages": "How many character cards show between two messages.",
+    "Icon": "Icon shown on the left of the message.",
+    "Text": "The message itself. Keep it short so it fits on one line.",
+    "Episode number": "Shown on the intro / starting-soon screen.",
+    "Schedule": "Used in messages like \u201cevery Tuesday @ 8pm\u201d.",
+    "Intro screen line (optional)": "Extra line of text on the intro screen.",
+    "HP relay address": "The Cloudflare relay that reads D&D Beyond and carries battle mode, HP, conditions and conversations. Set once.",
+    "Check every (seconds)": "How often the stream checks for HP and condition changes.",
+    "Relay key (saved on this computer only)": "Password that lets this computer change battle mode, HP, conditions and conversations. Saved in this browser only.",
+    "Banner text": "The words on the short-break screen.",
+    "Seconds per photo": "How long each picked photo floats up front.",
+    "Photos on screen": "How many photos are in the collage at once.",
+    "Plucks before a new set": "After this many photos, the collage swaps to a fresh random set.",
+    "Show HP bars on the camera windows": "Master switch for HP bars. Battle mode still decides when they show.",
+    "Use the Discord art": "Use every image exported from the Discord #encounters channel.",
+    "Show art instead of the GM camera": "Covers the GM camera with the GM art image.",
+  };
+  function tipFor(label) {
+    var t = TIPS[label]; if (!t) return null;
+    var b = document.createElement("button"); b.type = "button"; b.className = "tip"; b.textContent = "?";
+    b.setAttribute("data-tip", t); b.setAttribute("aria-label", "Help: " + t);
+    b.addEventListener("click", function (e) { e.preventDefault(); b.focus(); });
+    return b;
+  }
+
   /* ---------- helpers for building forms ---------- */
   function field(label, value, onInput, opts) {
     opts = opts || {};
     var l = document.createElement("label"); l.className = "f"; l.textContent = label;
+    var tp = tipFor(label); if (tp) { var lt = document.createElement("span"); lt.appendChild(document.createTextNode(label)); lt.appendChild(tp); l.textContent = ""; l.appendChild(lt); }
     var i = document.createElement(opts.type === "textarea" ? "textarea" : opts.options ? "select" : "input");
     if (opts.options) opts.options.forEach(function (o) { var op = document.createElement("option"); op.value = o[0]; op.textContent = o[1]; i.appendChild(op); });
     else if (opts.type !== "textarea") i.type = opts.type || "text";
@@ -220,7 +430,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var l = document.createElement("label"); l.className = "chk";
     var i = document.createElement("input"); i.type = "checkbox"; i.checked = !!value; if (id) i.id = id;
     i.addEventListener("change", function () { onChange(i.checked); changed(); renderAll(); });
-    l.appendChild(i); l.appendChild(document.createTextNode(label)); return l;
+    l.appendChild(i); l.appendChild(document.createTextNode(label)); var tp = tipFor(label); if (tp) l.appendChild(tp); return l;
   }
   function btn(text, onClick, cls) { var b = document.createElement("button"); b.type = "button"; b.className = "btn small " + (cls || ""); b.textContent = text; b.addEventListener("click", onClick); return b; }
   function mod(v) { if (v == null || v === "") return ""; var m = Math.floor((v - 10) / 2); return (m >= 0 ? "+" : "") + m; }
@@ -407,6 +617,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var g3 = document.createElement("div"); g3.className = "grid";
     g3.appendChild(field("HP relay address", R.url, function (v) { R.url = v.trim(); }, { id: "h-url" }));
     g3.appendChild(field("Check every (seconds)", R.seconds || 5, function (v) { R.seconds = v; }, { type: "number", min: 2, id: "h-sec" }));
+    g3.appendChild(field("Relay key (saved on this computer only)", hpKey, function (v) { hpKey = v.trim(); LS.set("reditus-hp-key", hpKey || null); paintBattle(); }, { id: "h-key", type: "password" }));
     e.appendChild(g3);
     var r3 = document.createElement("div"); r3.className = "row";
     r3.appendChild(check("Show HP bars on the camera windows", R.bars !== false, function (v) { R.bars = v; }, "h-bars"));
@@ -455,7 +666,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     fetch(u + "/hp?ids=" + ids.join(",") + "&t=" + Date.now()).then(function (r) { return r.json(); }).then(function (j) {
       LIVE.chars = j.chars || {}; LIVE.battle = typeof j.battle === "boolean" ? j.battle : null; LIVE.mapBars = j.mapBars !== false;
       LIVE.conditions = Object.assign({}, j.conditions || {}, condPending);
-      LIVE.talk = j.talk && j.talk.a ? j.talk : null; paintTalk();
+      LIVE.talk = j.talk && j.talk.a ? j.talk : null; LIVE.seen = Date.now(); paintTalk();
       // keep values we're still sending, so the numbers don't jump back while a click is in flight
       LIVE.manual = Object.assign({}, j.manual || {}, hpPending);
       hpErr = LIVE.battle === null ? "The relay has no storage yet (KV not bound), so battle mode and manual HP can't be saved." : "";
@@ -465,8 +676,8 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   setInterval(relayPoll, 3000);
   function sendState(body) {
     var u = relayUrl();
-    if (!u) { status("Add the HP relay address first (Show & GM tab).", "bad"); return Promise.reject(); }
-    if (!hpKey) { status("Add the relay key in the Battle / HP tab first.", "bad"); $("tab-battle").click(); return Promise.reject(); }
+    if (!u) { status("Add the HP relay address first (Setup → Show & GM).", "bad"); return Promise.reject(); }
+    if (!hpKey) { status("Enter the relay key first (top of Live mode).", "bad"); setMode("live"); var k = $("live-key"); if (k) k.focus(); return Promise.reject(); }
     return fetch(u + "/state", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + hpKey }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
       .then(function (j) { LIVE.battle = j.state.battle; LIVE.mapBars = j.state.mapBars !== false; if (j.state.conditions) LIVE.conditions = Object.assign({}, j.state.conditions, condPending); status("Sent to the stream.", "good"); paintBattle(); return j; })
@@ -505,116 +716,161 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     } else if (i >= 0) list.splice(i, 1); else list.push(id);
     setConds(p, list);
   }
+  /* ---------- LIVE: party cards (HP + conditions) ---------- */
+  var openPick = {};   // which characters have the condition picker open
   function renderBattle() {
-    var root = $("s-battle"); root.innerHTML = "";
-    var c = document.createElement("div"); c.className = "card";
-    c.innerHTML = "<h3>Battle mode</h3><p class=\"hint\">The <b>⚔ Battle mode</b> button at the top turns the HP bars on and off on stream. It takes effect in a few seconds, with no Publish needed. Outside battle mode the bars stay hidden.</p><p class=\"hint\">The <b>battle map screen</b> has its own switch, <b>🗺 Map HP bars</b>, which is on by default and ignores battle mode.</p>";
-    var g = document.createElement("div"); g.className = "grid";
-    var kf = field("Relay key (saved on this computer only)", hpKey, function (v) { hpKey = v.trim(); LS.set("reditus-hp-key", hpKey || null); }, { id: "h-key", type: "password" });
-    g.appendChild(kf); c.appendChild(g);
-    var st = document.createElement("p"); st.className = "hint"; st.id = "hp-state"; c.appendChild(st);
-    root.appendChild(c);
-    var d = document.createElement("div"); d.className = "card"; d.id = "hp-list";
-    d.innerHTML = "<h3>Hit points</h3><p class=\"hint\">Normally each bar follows the player's D&amp;D Beyond sheet. Pressing a button here switches that character to <b>manual</b> until you press <b>Use D&amp;D Beyond</b>. Damage comes off temp HP first.</p><p class=\"hint\"><b>Conditions:</b> anything ticked on a player's D&amp;D Beyond sheet shows by itself (dashed outline). Click a condition to add or remove it yourself. Exhaustion goes up a level each click. Conditions show on stream whenever the HP bars do.</p>";
+    var root = $("live-party"); if (!root) return; root.innerHTML = "";
     S.party.forEach(function (p) {
-      var row = document.createElement("div"); row.className = "hprow"; row.setAttribute("data-pid", p.id);
-      var who = document.createElement("div"); who.className = "who";
-      who.innerHTML = "<b>" + esc(p.fullName || p.name) + '</b><small class="src"></small><div class="hpmeter"><i class="c"></i><i class="t"></i></div>';
-      row.appendChild(who);
-      var b = document.createElement("div"); b.className = "hpbtns";
-      [-10, -5, -1].forEach(function (n) { b.appendChild(btn(String(n), function () { damage(p, -n); }, "dmg")); });
-      [1, 5, 10].forEach(function (n) { b.appendChild(btn("+" + n, function () { heal(p, n); }, "heal")); });
-      var amt = document.createElement("input"); amt.type = "number"; amt.min = 0; amt.placeholder = "amt"; amt.setAttribute("aria-label", "Amount for " + (p.name || ""));
-      b.appendChild(amt);
-      b.appendChild(btn("Damage", function () { var n = +amt.value; if (n > 0) { damage(p, n); amt.value = ""; } }, "dmg"));
-      b.appendChild(btn("Heal", function () { var n = +amt.value; if (n > 0) { heal(p, n); amt.value = ""; } }, "heal"));
-      b.appendChild(btn("Set temp", function () { var n = +amt.value; if (amt.value !== "") { setHp(p, hpOf(p).current, n); amt.value = ""; } }));
-      b.appendChild(btn("Full", function () { setHp(p, hpOf(p).max, 0); }));
-      b.appendChild(btn("Use D&D Beyond", function () { delete LIVE.manual[p.id]; delete hpPending[p.id]; var m = {}; m[p.id] = null; sendState({ manual: m }); paintBattle(); }));
-      row.appendChild(b);
-      if (window.ReditusConditions) {
-        var cr = document.createElement("div"); cr.className = "conds"; cr.setAttribute("role", "group"); cr.setAttribute("aria-label", "Conditions for " + (p.name || ""));
-        window.ReditusConditions.list.forEach(function (c) {
-          var ch = document.createElement("button"); ch.type = "button"; ch.className = "cchip"; ch.setAttribute("data-c", c.id); ch.style.setProperty("--cc", c.col);
-          ch.innerHTML = window.ReditusConditions.icon(c.id) + "<span>" + c.name + "</span>";
-          ch.addEventListener("click", function () { toggleCond(p, c.id); });
-          cr.appendChild(ch);
-        });
-        cr.appendChild(btn("Clear", function () { setConds(p, []); }));
-        row.appendChild(cr);
-      }
-      d.appendChild(row);
+      var c = document.createElement("div"); c.className = "lpc"; c.setAttribute("data-pid", p.id);
+      c.innerHTML = '<div class="lph"><img alt="" src="' + esc(p.portrait || "") + '"><div class="nm"><b title="' + esc(p.fullName || p.name) + '">' + esc(p.name || p.fullName) + '</b><small class="src"></small></div>' +
+        '<div class="hpnum"><span class="cur">–</span><small> / <span class="max">–</span></small> <span class="tmp"></span></div></div>' +
+        '<div class="lpbar"><i class="c"></i><i class="t"></i></div>';
+      var b = document.createElement("div"); b.className = "lpbtns";
+      [-10, -5, -1].forEach(function (n) { var x = btn(String(n).replace("-", "−"), function () { damage(p, -n); }, "dmg"); x.classList.remove("small"); x.setAttribute("aria-label", "Damage " + (p.name || "") + " " + (-n)); b.appendChild(x); });
+      [1, 5, 10].forEach(function (n) { var x = btn("+" + n, function () { heal(p, n); }, "heal"); x.classList.remove("small"); x.setAttribute("aria-label", "Heal " + (p.name || "") + " " + n); b.appendChild(x); });
+      c.appendChild(b);
+      var a = document.createElement("div"); a.className = "lpamt";
+      var amt = document.createElement("input"); amt.type = "number"; amt.min = 0; amt.inputMode = "numeric"; amt.placeholder = "#"; amt.id = "amt-" + p.id; amt.setAttribute("aria-label", "Amount for " + (p.name || ""));
+      a.appendChild(amt);
+      [["Damage", "dmg", function (n) { damage(p, n); }], ["Heal", "heal", function (n) { heal(p, n); }], ["Temp HP", "", function (n) { setHp(p, hpOf(p).current, n); }]].forEach(function (d) {
+        var x = btn(d[0], function () { var n = +amt.value; if (amt.value !== "" && n >= 0) { d[2](n); amt.value = ""; } else amt.focus(); }, d[1]); x.classList.remove("small"); a.appendChild(x);
+      });
+      amt.addEventListener("keydown", function (e) { if (e.key === "Enter") { var n = +amt.value; if (n > 0) { damage(p, n); amt.value = ""; } } });
+      c.appendChild(a);
+      var cr = document.createElement("div"); cr.className = "lpconds"; c.appendChild(cr);
+      var pk = document.createElement("div"); pk.className = "cpick"; pk.hidden = !openPick[p.id]; pk.setAttribute("role", "group"); pk.setAttribute("aria-label", "Conditions for " + (p.name || ""));
+      if (window.ReditusConditions) window.ReditusConditions.list.forEach(function (cd) {
+        var ch = document.createElement("button"); ch.type = "button"; ch.className = "cchip"; ch.setAttribute("data-c", cd.id); ch.style.setProperty("--cc", cd.col);
+        ch.innerHTML = window.ReditusConditions.icon(cd.id) + "<span>" + cd.name + "</span>";
+        ch.addEventListener("click", function () { toggleCond(p, cd.id); });
+        pk.appendChild(ch);
+      });
+      c.appendChild(pk);
+      var more = document.createElement("div"); more.className = "lpmore";
+      more.appendChild(btn("Full HP", function () { setHp(p, hpOf(p).max, 0); }));
+      more.appendChild(btn("Use sheet HP", function () { delete LIVE.manual[p.id]; delete hpPending[p.id]; var m = {}; m[p.id] = null; sendState({ manual: m }); paintBattle(); }));
+      more.appendChild(btn("Clear conditions", function () { setConds(p, []); }));
+      Array.prototype.forEach.call(more.children, function (x) { if (x.textContent === "Use sheet HP") x.title = "Stop using manual HP and follow their D&D Beyond sheet again"; });
+      c.appendChild(more);
+      root.appendChild(c);
     });
-    root.appendChild(d);
     paintBattle();
   }
   function paintBattle() {
-    var bb = $("b-battle");
+    var bb = $("b-battle"), mb = $("b-mapbars");
     bb.setAttribute("aria-pressed", LIVE.battle ? "true" : "false");
-    bb.textContent = "⚔ Battle mode: " + (LIVE.battle ? "ON" : "off");
-    var mb = $("b-mapbars"); mb.setAttribute("aria-pressed", LIVE.mapBars ? "true" : "false"); mb.textContent = "🗺 Map HP bars: " + (LIVE.mapBars ? "on" : "off");
-    var st = $("hp-state");
-    if (st) st.textContent = !relayUrl() ? "No relay address yet. Add it in Show & GM → Live HP bars." : hpErr || (LIVE.battle ? "Battle mode is ON. HP bars are showing on stream." : "Battle mode is off.");
+    bb.querySelector("span").textContent = LIVE.battle ? "ON · HP bars + conditions showing on stream" : "Off · HP bars and conditions hidden";
+    mb.setAttribute("aria-pressed", LIVE.mapBars ? "true" : "false");
+    mb.querySelector("span").textContent = (LIVE.mapBars ? "On" : "Off") + " · battle map screen only";
+    // connection line
+    var cn = $("conn"), ct = $("conn-t");
+    if (cn && !cn.querySelector(".keyin")) {
+      var bad = !relayUrl() || hpErr || !hpKey;
+      cn.className = "conn " + (bad ? "bad" : LIVE.seen ? "ok" : "");
+      ct.textContent = !relayUrl() ? "No HP relay set up yet: see Setup → Show & GM." : !hpKey ? "Enter the relay key to control the stream from this computer:" : hpErr ? hpErr : LIVE.seen ? "Connected to the stream · changes go live in a few seconds" : "Connecting…";
+      if (!hpKey && relayUrl()) {
+        var k = document.createElement("div"); k.className = "keyin";
+        k.innerHTML = '<input type="password" id="live-key" placeholder="Relay key" autocomplete="off" aria-label="Relay key">';
+        var sv = btn("Save", function () { var v = $("live-key").value.trim(); if (!v) return; hpKey = v; LS.set("reditus-hp-key", v); k.remove(); paintBattle(); status("Relay key saved on this computer.", "good"); });
+        sv.classList.remove("small"); k.appendChild(sv); cn.appendChild(k);
+      }
+    }
     if (!S) return;
     S.party.forEach(function (p) {
-      var row = document.querySelector('.hprow[data-pid="' + p.id + '"]'); if (!row) return;
-      var h = hpOf(p), src = row.querySelector(".src");
+      var c = document.querySelector('.lpc[data-pid="' + p.id + '"]'); if (!c) return;
+      var h = hpOf(p), src = c.querySelector(".src"), pct = Math.min(100, h.current / h.max * 100);
       src.className = "src" + (h.src === "manual" ? " man" : "");
-      src.textContent = h.current + (h.temp ? " +" + h.temp + " temp" : "") + " / " + h.max + " · " +
-        (h.src === "manual" ? "manual (D&D Beyond ignored)" : h.src === "ddb" ? "from D&D Beyond" : h.src === "none" ? (ddbOf(p) ? "waiting for D&D Beyond…" : "no sheet link, manual only") : "D&D Beyond: " + h.src.slice(4));
-      row.querySelector(".c").style.width = Math.min(100, h.current / h.max * 100) + "%";
-      var mine = manualConds(p), sheet = sheetConds(p);
-      Array.prototype.forEach.call(row.querySelectorAll(".cchip"), function (ch) {
+      src.textContent = h.src === "manual" ? "Manual HP (sheet ignored)" : h.src === "ddb" ? "From D&D Beyond" : h.src === "none" ? (ddbOf(p) ? "Waiting for D&D Beyond…" : "No sheet · manual only") : "D&D Beyond: " + h.src.slice(4);
+      c.querySelector(".cur").textContent = h.current; c.querySelector(".max").textContent = h.max;
+      c.querySelector(".tmp").textContent = h.temp ? "+" + h.temp + " temp" : "";
+      c.classList.toggle("down", h.current <= 0);
+      c.querySelector(".c").style.width = pct + "%";
+      var t = c.querySelector(".t"); t.style.left = pct + "%"; t.style.width = Math.min(100 - pct, h.temp / h.max * 100) + "%";
+      // active conditions as chips (tap to remove) + the add button
+      var mine = manualConds(p), sheet = sheetConds(p), cr = c.querySelector(".lpconds"), pk = c.querySelector(".cpick"), R = window.ReditusConditions || { byId: {}, icon: function () { return ""; } };
+      var active = sheet.map(function (x) { return { x: x, sheet: true }; }).concat(mine.filter(function (x) { return !sheet.some(function (y) { return cid(y) === cid(x); }); }).map(function (x) { return { x: x }; }));
+      cr.innerHTML = "";
+      if (!active.length) { var n = document.createElement("span"); n.className = "none"; n.textContent = "No conditions"; cr.appendChild(n); }
+      active.forEach(function (a) {
+        var id = cid(a.x), cd = R.byId[id] || { name: id, col: "#e9b979" }, ch = document.createElement("button");
+        ch.type = "button"; ch.className = "cchip" + (a.sheet ? " sheet" : ""); ch.setAttribute("aria-pressed", "true"); ch.style.setProperty("--cc", cd.col);
+        ch.innerHTML = R.icon(id) + "<span>" + esc(cd.name) + (id === "exhaustion" ? " " + (a.x.level || 1) : "") + (a.sheet ? " · sheet" : " ✕") + "</span>";
+        ch.title = a.sheet ? "Set on the D&D Beyond sheet. Clear it there." : id === "exhaustion" ? "Tap to raise the level (1–6, then off)" : "Tap to remove";
+        ch.addEventListener("click", function () { toggleCond(p, id); });
+        cr.appendChild(ch);
+      });
+      var add = document.createElement("button"); add.type = "button"; add.className = "cchip addc"; add.setAttribute("aria-expanded", openPick[p.id] ? "true" : "false");
+      add.textContent = openPick[p.id] ? "Done" : "＋ Condition";
+      add.addEventListener("click", function () {
+        var open = !openPick[p.id]; openPick = {}; if (open) openPick[p.id] = true;
+        Array.prototype.forEach.call(document.querySelectorAll(".lpc"), function (x) { var on = !!openPick[x.getAttribute("data-pid")]; x.classList.toggle("picking", on); x.querySelector(".cpick").hidden = !on; });
+        paintBattle();
+      });
+      cr.appendChild(add);
+      Array.prototype.forEach.call(pk.querySelectorAll(".cchip"), function (ch) {
         var id = ch.getAttribute("data-c"), m = mine.filter(function (x) { return cid(x) === id; })[0], sh = sheet.filter(function (x) { return cid(x) === id; })[0], on = m || sh;
         ch.setAttribute("aria-pressed", on ? "true" : "false"); ch.classList.toggle("sheet", !!sh);
-        ch.title = sh ? "Set on the D&D Beyond sheet" : id === "exhaustion" ? "Click to raise the level (1–6, then off)" : "";
-        var lvl = on && id === "exhaustion" ? " " + (on.level || 1) : "";
-        ch.querySelector("span").textContent = ((window.ReditusConditions.byId[id] || {}).name || id) + lvl;
+        ch.querySelector("span").textContent = ((R.byId[id] || {}).name || id) + (on && id === "exhaustion" ? " " + (on.level || 1) : "");
       });
-      var t = row.querySelector(".t"); t.style.left = Math.min(100, h.current / h.max * 100) + "%"; t.style.width = Math.min(100 - h.current / h.max * 100, h.temp / h.max * 100) + "%";
     });
   }
 
-  /* ---------- Conversation (talks to the relay: the conversation scene changes within a few seconds, no Publish needed) ---------- */
+  /* ---------- LIVE: conversation picker (tap two characters, Apply) ---------- */
   var talkPick = null;
-  function talkOptions() {
-    return S.party.map(function (p) { return [p.id, p.fullName || p.name]; }).concat([["gm", (S.gm && S.gm.label) || "Grand Master"]]);
+  function talkPeople() {
+    return S.party.map(function (p) { return { id: p.id, name: p.name || p.fullName, img: p.portrait }; }).concat([{ id: "gm", name: (S.gm && S.gm.label) || "Grand Master", gm: true }]);
   }
   function renderTalk() {
-    var root = $("s-talk"); root.innerHTML = "";
-    var c = document.createElement("div"); c.className = "card";
-    c.innerHTML = "<h3>Conversation scene</h3><p class=\"hint\">Pick the two characters talking and press <b>Apply</b>. The conversation screen in OBS swaps to them within a few seconds, cameras included once OBS camera placement is set up. The scrolling bar alternates between just their two stat cards. Then switch to the conversation scene in OBS.</p>";
-    var g = document.createElement("div"); g.className = "grid";
-    var cur = talkPick || LIVE.talk || {};
-    var fa = field("Left", cur.a || (S.party[0] || {}).id, function () {}, { id: "talk-a", options: talkOptions() });
-    var fb = field("Right", cur.b || (S.party[1] || {}).id, function () {}, { id: "talk-b", options: talkOptions() });
-    g.appendChild(fa); g.appendChild(fb); c.appendChild(g);
-    ["talk-a", "talk-b"].forEach(function (id) { setTimeout(function () { var el = $(id); if (el) el.addEventListener("change", function () { talkPick = { a: $("talk-a").value, b: $("talk-b").value }; previewTalk(); paintTalk(); }); }, 0); });
-    var r = document.createElement("div"); r.className = "row"; r.style.marginTop = "12px";
-    r.appendChild(btn("⇄ Swap sides", function () { var a = $("talk-a").value; $("talk-a").value = $("talk-b").value; $("talk-b").value = a; talkPick = { a: $("talk-a").value, b: $("talk-b").value }; previewTalk(); paintTalk(); }));
-    var ap = btn("Apply to stream", function () {
-      var a = $("talk-a").value, b = $("talk-b").value;
-      if (a === b) { status("Pick two different characters.", "warn"); return; }
-      sendState({ talk: { a: a, b: b } }).then(function (j) { if (j) { LIVE.talk = { a: a, b: b }; talkPick = null; paintTalk(); status("Conversation scene updated.", "good"); } });
-    }, "primary");
-    ap.classList.remove("small"); ap.id = "talk-apply"; r.appendChild(ap);
-    c.appendChild(r);
-    var st = document.createElement("p"); st.className = "hint"; st.id = "talk-state"; c.appendChild(st);
-    root.appendChild(c);
+    var g = $("talk-grid"); if (!g) return; g.innerHTML = "";
+    talkPeople().forEach(function (t) {
+      var b = document.createElement("button"); b.type = "button"; b.className = "tpick"; b.setAttribute("data-id", t.id);
+      b.innerHTML = (t.gm ? '<span class="gmface">GM</span>' : '<img alt="" src="' + esc(t.img || "") + '">') + "<span>" + esc(t.name) + "</span>";
+      b.addEventListener("click", function () {
+        var cur = talkPick || LIVE.talk || {};
+        // first tap picks Left, second picks Right; tapping a picked one un-picks it
+        var a = cur.a, r = cur.b;
+        if (!talkPick) { a = t.id; r = null; }
+        else if (a === t.id) { a = r; r = null; }
+        else if (r === t.id) { r = null; }
+        else if (!a) a = t.id; else if (!r) r = t.id; else { a = r; r = t.id; }
+        talkPick = { a: a, b: r }; paintTalk();
+      });
+      g.appendChild(b);
+    });
     paintTalk();
   }
-  function nameOf(id) { var o = talkOptions().filter(function (x) { return x[0] === id; })[0]; return o ? o[1] : id; }
+  function nameOf(id) { var o = talkPeople().filter(function (x) { return x.id === id; })[0]; return o ? o.name : id; }
   function paintTalk() {
-    var st = $("talk-state"); if (!st) return;
-    var live = LIVE.talk, pend = talkPick && (!live || talkPick.a !== live.a || talkPick.b !== live.b);
-    st.innerHTML = (live ? "On stream now: <b>" + esc(nameOf(live.a)) + "</b> &amp; <b>" + esc(nameOf(live.b)) + "</b>." : "Nothing applied yet. The scene shows the first two seated characters.") +
-      (pend ? " <span style=\"color:var(--gold-hi)\">Not applied yet: press Apply.</span>" : "");
+    var st = $("talk-state"); if (!st || !S) return;
+    var live = LIVE.talk, sel = talkPick || live || {};
+    Array.prototype.forEach.call(document.querySelectorAll(".tpick"), function (b) {
+      var id = b.getAttribute("data-id");
+      if (sel.a === id) b.setAttribute("data-side", "L"); else if (sel.b === id) b.setAttribute("data-side", "R"); else b.removeAttribute("data-side");
+      b.classList.toggle("onair", !!live && (live.a === id || live.b === id));
+    });
+    var pend = talkPick && (!live || talkPick.a !== live.a || talkPick.b !== live.b);
+    var ready = talkPick && talkPick.a && talkPick.b;
+    $("talk-apply").disabled = !(pend && ready);
+    st.innerHTML = (live ? "On air: <b>" + esc(nameOf(live.a)) + "</b> &amp; <b>" + esc(nameOf(live.b)) + "</b>" : "Nothing applied yet.") +
+      (talkPick && !ready ? '<br><span class="pend">Tap one more character.</span>' : pend ? '<br><span class="pend">Ready: ' + esc(nameOf(talkPick.a)) + " &amp; " + esc(nameOf(talkPick.b)) + ". Press Apply.</span>" : "");
   }
-  // show the picked pair in the preview straight away (switches the preview to the conversation screen)
-  function previewTalk() {
-    if ($("pv-scene").value !== "talk") { $("pv-scene").value = "talk"; reloadPreview(); setTimeout(previewTalk, 900); return; }
-    [pv, pvu].forEach(function (f) { try { if (!f.hidden && f.contentWindow) f.contentWindow.postMessage({ type: "reditus:talk", talk: talkPick }, "*"); } catch (e) {} });
+  $("talk-swap").addEventListener("click", function () { var c = talkPick || LIVE.talk; if (!c) return; talkPick = { a: c.b, b: c.a }; paintTalk(); });
+  $("talk-apply").addEventListener("click", function () {
+    if (!talkPick || !talkPick.a || !talkPick.b) return;
+    var t = { a: talkPick.a, b: talkPick.b };
+    sendState({ talk: t }).then(function (j) { if (j) { LIVE.talk = t; talkPick = null; paintTalk(); status("Conversation scene updated.", "good"); } });
+  });
+
+  /* ---------- modes ---------- */
+  var MODE = "live";
+  function setMode(m) {
+    MODE = m; LS.set("reditus-mode", m);
+    document.body.setAttribute("data-mode", m);
+    ["live", "setup", "help"].forEach(function (x) { $("mode-" + x).hidden = x !== m; $("m-" + x).setAttribute("aria-selected", x === m ? "true" : "false"); });
+    if (m === "setup" && !pv.src) reloadPreview();
+    if (m === "setup") fit();
   }
+  ["live", "setup", "help"].forEach(function (x) { $("m-" + x).addEventListener("click", function () { setMode(x); }); });
 
   /* ---------- Break ---------- */
   function renderBreak() {
@@ -648,7 +904,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   document.querySelectorAll(".tabs button").forEach(function (b) {
     b.addEventListener("click", function () {
       document.querySelectorAll(".tabs button").forEach(function (x) { x.setAttribute("aria-selected", x === b ? "true" : "false"); });
-      ["party", "ticker", "show", "break", "battle", "talk"].forEach(function (t) { $("s-" + t).hidden = t !== b.dataset.t; });
+      ["party", "ticker", "show", "break"].forEach(function (t) { $("s-" + t).hidden = t !== b.dataset.t; });
     });
   });
 
@@ -739,7 +995,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   $("tok-forget").addEventListener("click", function () { token = ""; LS.set("reditus-gh-token", null); $("tok").value = ""; closeDlg(); status("Key removed from this browser.", "warn"); });
   addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("dlg").hidden) closeDlg(); });
 
-  reloadPreview(); load();
+  setMode(LS.get("reditus-mode") || "live"); load();
 })();
 </script>
 </body>
