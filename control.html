@@ -70,6 +70,8 @@ section[hidden] { display: none !important; }
 .card h3 .spacer { flex: 1; }
 .card h3 .btn { font-family: var(--body); letter-spacing: 0; }
 .card.off { opacity: .7; }
+.card h3 .qtog { min-width: 92px; border-color: var(--line); color: var(--muted); }
+.card h3 .qtog.on { border-color: #6ee07a; color: #c9f5cf; background: rgba(60, 150, 80, .22); }
 .card .fold { width: 30px; height: 30px; flex: none; display: grid; place-items: center; background: none; border: 1px solid var(--line); color: var(--gold-hi); cursor: pointer; padding: 0; font-size: 13px; transition: transform .15s; }
 .card .fold:hover { border-color: var(--gold-hi); }
 .card.collapsed .fold { transform: rotate(-90deg); }
@@ -612,6 +614,11 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       var img = document.createElement("img"); img.className = "portrait"; img.alt = ""; img.src = p.portrait || ""; img.onclick = toggle; img.style.cursor = "pointer"; h.appendChild(img);
       var ttl = document.createElement("span"); ttl.className = "title"; ttl.textContent = p.fullName || p.name || "New character"; ttl.onclick = toggle; h.appendChild(ttl);
       var sp = document.createElement("span"); sp.className = "spacer"; h.appendChild(sp);
+      // quick switches that stay visible while the pane is collapsed (same settings as the ticks inside)
+      [["Camera", "seat", "Camera window on stream (untick for someone not on camera)"], ["Card", "ticker", "Stat card in the scrolling bar"]].forEach(function (q) {
+        var on = p[q[1]] !== false, b = btn((on ? "● " : "○ ") + q[0], function (e) { e.stopPropagation(); p[q[1]] = !(p[q[1]] !== false); changed(); renderAll(); }, "qtog" + (on ? " on" : ""));
+        b.setAttribute("aria-pressed", String(on)); b.title = q[2] + (on ? " · on" : " · off"); h.appendChild(b);
+      });
       h.appendChild(btn("▲", function () { if (idx > 0) { S.party.splice(idx - 1, 0, S.party.splice(idx, 1)[0]); changed(); renderAll(); } }));
       h.appendChild(btn("▼", function () { if (idx < S.party.length - 1) { S.party.splice(idx + 1, 0, S.party.splice(idx, 1)[0]); changed(); renderAll(); } }));
       h.appendChild(btn("Remove", function () { var ok = c.querySelector(".confirm"); if (ok) { S.party.splice(idx, 1); changed(); renderAll(); } else { var b = this; b.textContent = "Click again to remove"; b.classList.add("confirm"); c.classList.add("confirm"); setTimeout(function () { if (b.isConnected) { b.textContent = "Remove"; c.classList.remove("confirm"); } }, 3000); } }, "danger"));

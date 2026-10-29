@@ -190,11 +190,11 @@
 
 /* CONCENTRATING — faint runes fading in and out all round the frame; blue frame glow when it's the only effect */
 .crunes { position: absolute; inset: 0; }
-.crunes i { position: absolute; left: 0; top: 0; color: #e2f0ff; font-style: normal; line-height: 1; opacity: 0;
+.crunes i { position: absolute; left: 0; top: 0; color: #cfe6ff; font-style: normal; line-height: 1; opacity: 0;
   offset-rotate: 0deg; offset-anchor: 50% 50%;
-  text-shadow: 0 0 6px #8cc4ff, 0 0 14px #4a8dff, 0 0 22px rgba(58, 125, 255, .55);
+  text-shadow: 0 0 6px #6fb0ff, 0 0 14px #3a7dff;
   animation-name: crune, crunelap; animation-timing-function: ease-in-out, linear; animation-iteration-count: infinite, infinite; }
-@keyframes crune { 0% { opacity: 0; } 14% { opacity: 1; } 72% { opacity: 1; } 86%, 100% { opacity: 0; } }
+@keyframes crune { 0% { opacity: 0; } 14% { opacity: .72; } 72% { opacity: .72; } 86%, 100% { opacity: 0; } }
 @keyframes crunelap { from { offset-distance: 0%; } to { offset-distance: 100%; } }
 /* the counter-rotating blue glow: a soft ring of light that sweeps round the frame anticlockwise */
 @property --cca { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
