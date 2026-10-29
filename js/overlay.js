@@ -117,7 +117,7 @@
       column(rest.length, 1649, 46, 224, 146, 224 / 146, 822, 17).forEach(function (r, i) { pSlot(rest[i], r, "s"); });
     } else if (SCENE === "talk") {
       // conversation: any two characters (or the GM) side by side; the scrolling bar swaps between just their two cards
-      L.lines = "fan"; L.ticker = true;
+      L.lines = "fan"; L.ticker = L.logos = true;
       var pick = talkPair(), all = (D.party || []), byId = function (id) { return id === "gm" ? "gm" : all.filter(function (p) { return p.id === id; })[0]; };
       var A = byId(pick[0]), B = byId(pick[1]);
       [[A, { x: 72, y: 128, w: 860, h: 559 }], [B, { x: 988, y: 128, w: 860, h: 559 }]].forEach(function (pr) {
