@@ -5,23 +5,23 @@
 
 /* markers */
 .cmarks { position: absolute; display: flex; gap: 5px; z-index: 6; }
-.cmark { --cc: #e9b979; position: relative; width: 30px; height: 30px; border-radius: 50%; color: var(--cc);
+.cmark { --cc: #e9b979; position: relative; width: 22px; height: 22px; border-radius: 50%; color: var(--cc);
   background: radial-gradient(circle at 50% 35%, #182a5c, #070f2a 70%);
   box-shadow: 0 0 0 1.5px #e9b979, 0 0 0 3px rgba(5, 8, 20, .85), 0 0 10px color-mix(in srgb, var(--cc) 55%, transparent), 0 3px 8px rgba(0, 0, 0, .6);
   display: grid; place-items: center; animation: cmarkin .6s cubic-bezier(.3, 1.6, .5, 1) both; }
 .cmark svg { width: 64%; height: 64%; filter: drop-shadow(0 0 3px color-mix(in srgb, var(--cc) 70%, transparent)); }
-.cmarks.big .cmark { width: 40px; height: 40px; }
+.cmarks.big .cmark { width: 26px; height: 26px; }
 .cmarks { align-items: center; }
-.clead { display: flex; align-items: center; gap: 10px; }
-.clead .cmark { width: 84px; height: 84px; box-shadow: 0 0 0 2.5px #e9b979, 0 0 0 5px rgba(5, 8, 20, .85), 0 0 18px color-mix(in srgb, var(--cc) 60%, transparent), 0 4px 12px rgba(0, 0, 0, .65); }
-.cmarks.big .clead .cmark { width: 112px; height: 112px; }
-.clead .cmark .pips { bottom: -10px; } .clead .cmark .pips b { width: 9px; height: 9px; }
-.crest { display: flex; gap: 5px; margin-left: 4px; }
+.clead { display: flex; align-items: center; gap: 5px; }
+.clead .cmark { width: 34px; height: 34px; box-shadow: 0 0 0 1.5px #e9b979, 0 0 0 3px rgba(5, 8, 20, .85), 0 0 10px color-mix(in srgb, var(--cc) 60%, transparent), 0 4px 12px rgba(0, 0, 0, .65); }
+.cmarks.big .clead .cmark { width: 45px; height: 45px; }
+.clead .cmark .pips { bottom: -6px; } .clead .cmark .pips b { width: 4px; height: 4px; }
+.crest { display: flex; gap: 4px; margin-left: 2px; }
 /* condition name beside the big icon: dark gold-edged plate so it always reads, with a light touch of the effect */
-.clabel { font-family: var(--display, serif); font-weight: normal; font-size: 26px; line-height: 1; letter-spacing: .06em; text-transform: uppercase; color: #fff;
-  padding: 9px 16px 7px; background: linear-gradient(180deg, rgba(14, 24, 60, .92), rgba(5, 10, 30, .92)); box-shadow: 0 0 0 1.5px #e9b979, 0 0 0 3px rgba(5, 8, 20, .8), 0 3px 10px rgba(0, 0, 0, .6);
+.clabel { font-family: "Arimo", "Segoe UI", Arial, sans-serif; font-weight: 700; font-size: 11px; line-height: 1; letter-spacing: .1em; text-transform: uppercase; color: #fff;
+  padding: 5px 8px 4px; background: linear-gradient(180deg, rgba(14, 24, 60, .92), rgba(5, 10, 30, .92)); box-shadow: 0 0 0 1px #e9b979, 0 0 0 2.5px rgba(5, 8, 20, .8), 0 2px 6px rgba(0, 0, 0, .6);
   text-shadow: 0 0 8px var(--cc), 0 2px 2px #000; white-space: nowrap; animation: clabelin .7s .15s cubic-bezier(.2, 1.2, .4, 1) both; }
-.cmarks.big .clabel { font-size: 36px; padding: 12px 22px 10px; }
+.cmarks.big .clabel { font-size: 15px; padding: 6px 10px 5px; }
 @keyframes clabelin { from { transform: translateX(-14px); clip-path: inset(0 100% 0 0); } to { transform: none; clip-path: inset(0 0 0 0); } }
 .clead.c-banished .clabel { animation: clabelin .7s .15s both, clphase 3.3s 1s ease-in-out infinite; }
 @keyframes clphase { 0%, 100% { text-shadow: 0 0 8px #c39bff, 0 2px 2px #000; } 50% { text-shadow: 0 0 14px #c39bff, 4px -2px 0 rgba(195, 155, 255, .45), -3px 1px 0 rgba(195, 155, 255, .3), 0 2px 2px #000; } }
@@ -93,24 +93,32 @@
 .frame.cf-stunned .edge, .frame.cf-stunned .corner { filter: brightness(1.25) drop-shadow(0 0 6px #ffe066); }
 .frame.cf-paralyzed .edge, .frame.cf-paralyzed .corner { filter: sepia(1) hue-rotate(160deg) saturate(2) brightness(1.2) drop-shadow(0 0 6px #7fd0ff); }
 .frame.cf-paralyzed { --gl: rgba(130, 210, 255, .4); }
-.corbit { position: absolute; left: 50%; width: 0; height: 0; animation: corbit 2.6s linear infinite; }
+.corbit { position: absolute; left: 50%; width: 0; height: 0; animation: corbit 3.7s linear infinite; }
 .corbit i { position: absolute; filter: drop-shadow(0 0 6px #ffe066) drop-shadow(0 2px 2px rgba(0, 0, 0, .7)); }
-.corbit i svg { width: 100%; height: 100%; animation: cspin 1.2s linear infinite reverse; }
+.corbit i svg { width: 100%; height: 100%; animation: cspin 1.7s linear infinite reverse; }
 @keyframes corbit { to { transform: rotate(360deg); } }
 @keyframes cspin { to { transform: rotate(360deg); } }
 
 /* PETRIFIED — gold turns to grey stone, cracks spread across the corners */
 .frame.cf-petrified .edge, .frame.cf-petrified .corner { filter: grayscale(1) contrast(1.25) brightness(1.05) drop-shadow(0 0 3px #000); }
 .cstone { position: absolute; inset: 0; box-shadow: inset 0 0 0 5px rgba(140, 140, 140, .55), inset 0 0 26px 8px rgba(60, 60, 60, .6); }
-.ccrack path { fill: none; stroke: rgba(240, 240, 240, .95); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+.ccrack path { fill: none; stroke: rgba(240, 240, 240, .95); stroke-width: calc(3px * var(--g, .8) / .8 * .8); stroke-linecap: round; stroke-linejoin: round;
   filter: drop-shadow(0 0 2px #000) drop-shadow(0 2px 0 rgba(0, 0, 0, .85)); stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: ccrack 22s ease-out infinite; }
-.ccrack path.br { stroke-width: 2; animation-name: ccrackbr; }
+.ccrack path.br { stroke-width: calc(2px * var(--g, .8) / .8 * .8); }
+/* side cracks spread in when petrified starts and stay; seal when it ends. middle cracks come and go on the 28s cycle */
+.ccrack path.cside { animation: cin 1.8s ease-out both; } .ccrack path.cside.br { animation-delay: .9s; }
+.ccrack path.cside.out { animation: csealout 1.3s ease-in both; }
+.ccrack path.cmid { animation: cmidcrack 28s ease-out infinite; } .ccrack path.cmid.br { animation-name: cmidcrackbr; }
+@keyframes cin { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes csealout { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -1; } }
+@keyframes cmidcrack { 0% { stroke-dashoffset: 1; } 7% { stroke-dashoffset: 0; } 31% { stroke-dashoffset: 0; } 37%, 100% { stroke-dashoffset: -1; } }
+@keyframes cmidcrackbr { 0%, 4% { stroke-dashoffset: 1; } 9% { stroke-dashoffset: 0; } 31% { stroke-dashoffset: 0; } 36%, 100% { stroke-dashoffset: -1; } }
 /* crack in (2s) → hold → seal up → pause → crack again */
 @keyframes ccrack { 0% { stroke-dashoffset: 1; } 9% { stroke-dashoffset: 0; } 80% { stroke-dashoffset: 0; } 88% { stroke-dashoffset: -1; } 100% { stroke-dashoffset: -1; } }
 @keyframes ccrackbr { 0%, 6% { stroke-dashoffset: 1; } 11% { stroke-dashoffset: 0; } 80% { stroke-dashoffset: 0; } 86% { stroke-dashoffset: -1; } 100% { stroke-dashoffset: -1; } }
 
 /* RESTRAINED — chains across the corners, tightening; GRAPPLED — vines grow in and sway */
-.cchain ellipse { fill: none; stroke: #cfd1de; stroke-width: 6.5; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .9)); }
+.cchain ellipse { fill: none; stroke: #cfd1de; filter: drop-shadow(0 calc(3px * var(--g, .8)) calc(3px * var(--g, .8)) rgba(0, 0, 0, .9)); }
 .cchain ellipse:nth-child(odd) { stroke: #b4b7c8; }
 /* side chains: slide in when restrained starts, then stay (straining) until it ends, then slide out */
 .cchain .cside { animation: csidein .9s cubic-bezier(.3, 1.35, .5, 1) both; }
@@ -127,13 +135,25 @@
 .cchain .clinks .cjig { animation: cstrain 3.4s ease-in-out infinite; }
 .cexit { z-index: 2; }
 .frame.cf-restrained .edge, .frame.cf-restrained .corner { filter: grayscale(.6) brightness(.9); }
-.cvine { fill: none; stroke: #4f9a2e; stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .85)); stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: cgrow 22s ease-out infinite; }
+.cvine { fill: none; stroke: #4f9a2e; stroke-width: calc(8px * var(--g, .8)); stroke-linecap: round; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .85)); stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: cgrow 22s ease-out infinite; }
 .cleaf { fill: #78c94a; stroke: #2f6a18; stroke-width: 1.2; opacity: 0; animation: cleaf 22s ease-out infinite; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .75)); }
 .cvines { animation: csway 4s ease-in-out infinite; transform-origin: 0 100%; }
 /* grow in → hold → wither back → pause → grow again */
 @keyframes cgrow { 0% { stroke-dashoffset: 1; } 11% { stroke-dashoffset: 0; } 80% { stroke-dashoffset: 0; } 89% { stroke-dashoffset: 1; } 100% { stroke-dashoffset: 1; } }
 @keyframes cleaf { 0%, 8% { opacity: 0; transform: scale(.4); } 12% { opacity: 1; transform: none; } 78% { opacity: 1; transform: none; } 82%, 100% { opacity: 0; transform: scale(.4); } }
 .cleaf { transform-box: fill-box; transform-origin: 0 50%; }
+/* side vines grow in with the condition and stay (swaying); wither when it ends. middle vines come and go on the 28s cycle */
+.cvine.cside { animation: cin 2s ease-out both; }
+.cvine.cside.out { animation: cwither 1.4s ease-in both; }
+.cleaf.cside { animation: cleafin .5s ease-out both; animation-delay: calc(var(--d) * 1.8s); }
+.cleaf.cside.out { animation: cleafout .6s ease-in both; animation-delay: calc((1 - var(--d)) * .8s); }
+.cvine.cmid { animation: cmidvine 28s ease-out infinite; }
+.cleaf.cmid { animation: cmidleaf 28s ease-out infinite; }
+@keyframes cwither { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 1; } }
+@keyframes cleafin { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: none; } }
+@keyframes cleafout { from { opacity: 1; transform: none; } to { opacity: 0; transform: scale(.3); } }
+@keyframes cmidvine { 0% { stroke-dashoffset: 1; } 8% { stroke-dashoffset: 0; } 31% { stroke-dashoffset: 0; } 38%, 100% { stroke-dashoffset: 1; } }
+@keyframes cmidleaf { 0%, 5% { opacity: 0; transform: scale(.3); } 10% { opacity: 1; transform: none; } 30% { opacity: 1; transform: none; } 34%, 100% { opacity: 0; transform: scale(.3); } }
 @keyframes csway { 50% { transform: rotate(.8deg); } }
 .frame.cf-grappled .edge, .frame.cf-grappled .corner { filter: sepia(.6) hue-rotate(40deg) saturate(1.6); }
 
@@ -172,7 +192,7 @@
 .crunes { position: absolute; inset: 0; }
 .crunes i { position: absolute; transform: translate(-50%, -50%); color: #cfe6ff; font-style: normal; line-height: 1; opacity: 0;
   text-shadow: 0 0 6px #6fb0ff, 0 0 14px #3a7dff; animation: crune ease-in-out infinite; }
-@keyframes crune { 0%, 100% { opacity: 0; } 35% { opacity: 0; } 55% { opacity: .9; } 75% { opacity: 0; } }
+@keyframes crune { 0% { opacity: 0; } 14% { opacity: .9; } 72% { opacity: .9; } 86%, 100% { opacity: 0; } }
 .frame.cf-concentrating .edge, .frame.cf-concentrating .corner { filter: sepia(1) hue-rotate(180deg) saturate(2.4) brightness(1.15) drop-shadow(0 0 7px #5aa0ff); animation: cconcglow 3s ease-in-out infinite; }
 @keyframes cconcglow { 50% { filter: sepia(1) hue-rotate(180deg) saturate(2.4) brightness(1.3) drop-shadow(0 0 14px #5aa0ff); } }
 
@@ -182,3 +202,35 @@
 /* small condition icons on the scrolling-bar stat card */
 .cmarks.ccard { position: absolute; left: 104px; bottom: -14px; z-index: 6; gap: 3px; }
 .cmarks.ccard .cmark { width: 28px; height: 28px; }
+
+/* INCAPACITATED — slow pink pulse on the frame (matches its icon); a dark veil slowly breathes over the window */
+.frame.cf-incapacitated .edge, .frame.cf-incapacitated .corner { filter: sepia(.9) hue-rotate(-40deg) saturate(1.8) brightness(1.05) drop-shadow(0 0 4px rgba(255, 138, 128, .5)); animation: cincap 4.5s ease-in-out infinite; }
+@keyframes cincap { 50% { filter: sepia(.9) hue-rotate(-40deg) saturate(2.1) brightness(1.2) drop-shadow(0 0 12px rgba(255, 138, 128, .95)); } }
+.cdim { position: absolute; inset: 0; background: #000; opacity: .06; animation: cdim 9s ease-in-out infinite; }
+@keyframes cdim { 50% { opacity: .38; } }
+/* PRONE — the frame slowly glows grey */
+.frame.cf-prone .edge, .frame.cf-prone .corner { filter: grayscale(.7) drop-shadow(0 0 3px rgba(190, 190, 200, .4)); animation: cprone 5s ease-in-out infinite; }
+@keyframes cprone { 50% { filter: grayscale(.7) brightness(1.1) drop-shadow(0 0 11px rgba(200, 200, 210, .9)); } }
+/* UNCONSCIOUS — the frame slowly glows white with a blue tinge (matches its icon) */
+.frame.cf-unconscious .edge, .frame.cf-unconscious .corner { filter: grayscale(.6) brightness(1.25) drop-shadow(0 0 4px rgba(220, 228, 255, .5)) drop-shadow(0 0 2px rgba(169, 184, 255, .5)); animation: cuncon 5s ease-in-out infinite; }
+@keyframes cuncon { 50% { filter: grayscale(.6) brightness(1.55) drop-shadow(0 0 10px rgba(240, 244, 255, .95)) drop-shadow(0 0 16px rgba(150, 170, 255, .8)); } }
+
+
+/* petrified: a light grey stone veil (keeps the face readable) */
+.cstonetint { position: absolute; inset: 0; background: rgba(150, 148, 144, .2); }
+
+/* DEAFENED — white-glowing music notes float up, get slashed through, then vanish */
+.frame.cf-deafened .edge, .frame.cf-deafened .corner, .frame.cf-silenced .edge, .frame.cf-silenced .corner { filter: grayscale(.4) brightness(1.1) drop-shadow(0 0 5px rgba(255, 255, 255, .55)); }
+.cnote { position: absolute; bottom: 4%; color: #fff; opacity: 0; filter: drop-shadow(0 0 3px rgba(255, 255, 255, .7)) drop-shadow(0 0 8px rgba(255, 255, 255, .35)) drop-shadow(0 1px 1px rgba(0, 0, 0, .5));
+  animation: cnote var(--dur, 6s) var(--del, 0s) ease-out infinite both; }
+.cnote svg { width: 100%; height: 100%; overflow: visible; }
+.cnote .x { fill: none; stroke: #ff6a5e; stroke-width: 2.8; stroke-linecap: round; stroke-dasharray: 1 1; stroke-dashoffset: 1; filter: drop-shadow(0 0 2px rgba(255, 80, 60, .9));
+  animation: cnotex var(--dur, 6s) var(--del, 0s) ease-out infinite both; }
+/* 32s cycle per icon: a slow ~6s rise; the slash/X lands about two-thirds of the way up, holds, then the icon fades by ~8s and waits for its next turn */
+@keyframes cnote { 0% { opacity: 0; transform: translateY(0) rotate(-6deg); } 2.5% { opacity: .48; } 19% { opacity: .48; transform: translateY(calc(var(--rise) * -1)) rotate(6deg); }
+  23% { opacity: .52; transform: translateY(calc(var(--rise) * -1.06)) rotate(6deg) scale(1.04); } 26.5%, 100% { opacity: 0; transform: translateY(calc(var(--rise) * -1.1)) rotate(8deg) scale(.7); } }
+@keyframes cnotex { 0%, 12% { stroke-dashoffset: 1; } 15%, 100% { stroke-dashoffset: 0; } }
+/* stat card: AC / HP badges and condition icons always sit above the condition effect */
+.cardframe .badges { z-index: 20; }
+.cardframe .cmarks.ccard { z-index: 21; }
+.cardframe .czap, .cardframe .cghost, .cardframe .cdark { z-index: 3; }
