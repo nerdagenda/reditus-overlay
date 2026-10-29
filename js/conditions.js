@@ -265,46 +265,64 @@
   /* apply to one camera frame. f = .frame element, s = slot {w,h,size}, t = border px */
   // remembers what each window showed last time, so a redraw carries on mid-animation (no replayed entrances)
   // and a removed condition can animate out (restrained chains)
+  // remembers what each window showed last time, so a redraw carries on mid-animation (no replayed entrances),
+  // and anything that was switched off gets a proper exit instead of cutting out
   var MEM = {}, EXITS = { restrained: 1300, grappled: 1500, petrified: 1500 };
+  function mainOf(list) { for (var i = 0; i < list.length; i++) if (FX[list[i].id]) return list[i]; return null; }
+  function sig(list) { return JSON.stringify(list || []); }
+
+  // draw a set of conditions into frame-like element F (its effect layer, frame recolour, markers)
+  function paint(F, s, t, list, opt, exiting) {
+    var big = s.w >= 380, z = el("div", "cfx", null), main = mainOf(list);
+    z.style.setProperty("--g", G.toFixed(3)); z.style.setProperty("--sc", SC.toFixed(3));
+    z.style.left = t + "px"; z.style.top = t + "px"; z.style.width = s.w + "px"; z.style.height = s.h + "px";
+    var edge = F.querySelector(":scope > .edge"); F.insertBefore(z, edge);
+    if (main) build[main.id](F, z, s.w, s.h, t, main, exiting && EXITS[main.id] ? true : false);
+    if (list.some(function (x) { return x.id === "concentrating"; })) concentrating(F, z, s.w, s.h, !main);
+    var mk = null;
+    if (!opt.noMarks && list.length) {
+      var lead = main || list[0], rest = list.filter(function (x) { return x !== lead; }), c = BY[lead.id];
+      mk = el("div", "cmarks" + (big ? " big" : ""), F); mk.style.left = (t + (big ? 14 : 9)) + "px"; mk.style.top = (t + (big ? 14 : 9)) + "px";
+      mk.innerHTML = '<span class="clead c-' + c.id + '" style="--cc:' + c.col + '">' + markerHTML([lead]) + '<b class="clabel">' + c.name + (lead.id === "exhaustion" && lead.level ? " " + lead.level : "") + "</b></span>" +
+        (rest.length ? '<span class="crest">' + markerHTML(rest) + "</span>" : "");
+    }
+    return { z: z, mk: mk, main: main };
+  }
+  // fast-forward a freshly drawn layer to where it would be if it had never been redrawn
+  function catchUp(F, parts, elapsed) {
+    if (!(elapsed > 50) || !parts.z.getAnimations) return;
+    var anims = parts.z.getAnimations({ subtree: true });
+    if (parts.mk) anims = anims.concat(parts.mk.getAnimations({ subtree: true }));
+    Array.prototype.forEach.call(F.querySelectorAll(":scope > .cghost, :scope > .czap, :scope > .cdark"), function (e) { anims = anims.concat(e.getAnimations({ subtree: true })); });
+    anims.forEach(function (an) { try { an.currentTime = (an.currentTime || 0) + elapsed; } catch (e) {} });
+  }
+
   function apply(f, s, t, list, opt) {
     opt = opt || {};
     list = norm(list);
-    var key = s.id || "x", now = Date.now(), prev = MEM[key] || { starts: {}, main: null }, starts = {};
+    var key = s.id || "x", now = Date.now(), prev = MEM[key] || { starts: {}, list: [] }, starts = {};
     list.forEach(function (x) { starts[x.id] = prev.starts[x.id] || now; });
-    var main = null;
-    for (var i = 0; i < list.length; i++) if (FX[list[i].id]) { main = list[i]; break; }
-    var gone = prev.main && (!main || main.id !== prev.main) && EXITS[prev.main] ? prev.main : null;
-    MEM[key] = { starts: starts, main: main && main.id };
-    if (!list.length && !gone) return;
+    MEM[key] = { starts: starts, list: list };
+    var removed = prev.list.length && sig(prev.list) !== sig(list) &&
+      prev.list.some(function (x) { return !list.some(function (y) { return y.id === x.id; }); });
+    if (!list.length && !removed) return;
     defs();
     SC = opt.scale || Math.max(.45, Math.min(1.6, s.h / 235)); G = SC * .8;
-    var big = s.w >= 380, z = el("div", "cfx", null);
-    z.style.setProperty("--g", G.toFixed(3)); z.style.setProperty("--sc", SC.toFixed(3));
-    z.style.left = t + "px"; z.style.top = t + "px"; z.style.width = s.w + "px"; z.style.height = s.h + "px";
-    var edge = f.querySelector(".edge"); f.insertBefore(z, edge);
-    if (gone) {   // play the leaving animation for the effect that just ended
-      var zx = el("div", "cfx cexit", null); zx.style.cssText = z.style.cssText; f.insertBefore(zx, edge);
-      build[gone](f, zx, s.w, s.h, t, { id: gone }, true);
-      setTimeout(function () { zx.remove(); }, EXITS[gone]);
+
+    if (removed) {
+      // snapshot of the old look, laid over the new one, that animates away and then removes itself
+      var pm = mainOf(prev.list), soft = pm && EXITS[pm.id] && !list.some(function (y) { return y.id === pm.id; });
+      var gw = el("div", "frame cexitwrap " + (soft ? "cexit-soft" : "cexit-wipe"), f);
+      var ge = el("div", "edge", gw); ge.style.borderWidth = t + "px";
+      Array.prototype.forEach.call(f.querySelectorAll(":scope > .corner"), function (c) { gw.appendChild(c.cloneNode(true)); });
+      var old = paint(gw, s, t, prev.list, { noMarks: opt.noMarks }, soft);
+      gw.classList.add("held");
+      if (!soft) catchUp(gw, old, now - (pm ? prev.starts[pm.id] : now));
+      setTimeout(function () { gw.remove(); }, soft ? 1500 : 1100);
     }
     if (!list.length) return;
-    if (main) build[main.id](f, z, s.w, s.h, t, main);
-    if (list.some(function (x) { return x.id === "concentrating"; })) concentrating(f, z, s.w, s.h, !main);
-    // the top condition gets a big icon with its name beside it; any others sit after it as small icons
-    var lead = main || list[0], rest = list.filter(function (x) { return x !== lead; });
-    if (opt.noMarks) { var mk = document.createElement("div"); } else {
-    var mk = el("div", "cmarks" + (big ? " big" : ""), f); mk.style.left = (t + (big ? 14 : 9)) + "px"; mk.style.top = (t + (big ? 14 : 9)) + "px";
-    var c = BY[lead.id];
-    mk.innerHTML = '<span class="clead c-' + c.id + '" style="--cc:' + c.col + '">' + markerHTML([lead]) + '<b class="clabel">' + c.name + (lead.id === "exhaustion" && lead.level ? " " + lead.level : "") + "</b></span>" +
-      (rest.length ? '<span class="crest">' + markerHTML(rest) + "</span>" : "");
-    }
-    // fast-forward every animation to where it would be if it had never been redrawn
-    var elapsed = main ? now - starts[main.id] : 0;
-    if (elapsed > 50 && z.getAnimations) {
-      var anims = z.getAnimations({ subtree: true }).concat(mk.getAnimations({ subtree: true }));
-      Array.prototype.forEach.call(f.querySelectorAll(":scope > .cghost, :scope > .czap, :scope > .cdark"), function (e) { anims = anims.concat(e.getAnimations({ subtree: true })); });
-      anims.forEach(function (an) { try { an.currentTime = (an.currentTime || 0) + elapsed; } catch (e) {} });
-    }
+    var parts = paint(f, s, t, list, opt, false);
+    catchUp(f, parts, parts.main ? now - starts[parts.main.id] : 0);
   }
 
   var API = window.ReditusConditions = { deafGlyph: "ears", list: C, byId: BY, fromDDB: DDB, apply: apply, normalize: norm, markerHTML: markerHTML, icon: function (id) { return BY[id] ? iconSVG(BY[id]) : ""; } };

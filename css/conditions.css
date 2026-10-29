@@ -234,3 +234,17 @@
 .cardframe .badges { z-index: 20; }
 .cardframe .cmarks.ccard { z-index: 21; }
 .cardframe .czap, .cardframe .cghost, .cardframe .cdark { z-index: 3; }
+
+/* switching a condition off: a snapshot of the old look plays out over the new one */
+.cexitwrap { position: absolute; inset: 0; pointer-events: none; z-index: 8; }
+.cexitwrap.held .cmark, .cexitwrap.held .clabel { animation: none !important; }
+/* clean wipe left → right with a gold glint riding the edge */
+.cexitwrap.cexit-wipe { animation: cwipe 1s cubic-bezier(.65, 0, .35, 1) forwards; }
+@keyframes cwipe { from { clip-path: inset(-6% -6% -6% -6%); } to { clip-path: inset(-6% -6% -6% 106%); } }
+.cexitwrap.cexit-wipe::after { content: ""; position: absolute; top: -10px; bottom: -10px; left: -30px; width: 22px; z-index: 9;
+  background: linear-gradient(90deg, rgba(255, 224, 163, 0), rgba(255, 240, 200, .95) 50%, rgba(255, 224, 163, 0)); filter: blur(2px);
+  box-shadow: 0 0 18px 6px rgba(255, 210, 130, .55); animation: cwipeglint 1s cubic-bezier(.65, 0, .35, 1) forwards; }
+@keyframes cwipeglint { from { left: -6%; } to { left: 101%; } }
+/* chains / vines / cracks: they play their own exit while the old frame colour fades back to gold */
+.cexitwrap.cexit-soft > .edge, .cexitwrap.cexit-soft > .corner, .cexitwrap.cexit-soft > .cmarks, .cexitwrap.cexit-soft .cstone, .cexitwrap.cexit-soft .cstonetint { animation: cfadeout 1.2s ease forwards; }
+@keyframes cfadeout { to { opacity: 0; } }
