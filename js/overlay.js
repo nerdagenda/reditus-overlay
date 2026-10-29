@@ -396,6 +396,30 @@
       b.textContent = h ? Math.max(0, h.current) : stat(p && p.hp);
     });
   }
+  /* D&D Beyond is the source of truth: for every character with a sheet link, level / race / class / AC / max HP /
+     ability scores come from the sheet (checked once a minute) and override what's typed in data.js. */
+  var SHEET = {}, SHEETSIG = "";
+  function applySheets() {
+    (D && D.party || []).forEach(function (p) {
+      var sh = SHEET[ddbId(p)]; if (!sh || sh.error || p.sheetSync === false) return;
+      ["level", "race", "cls", "ac", "hp"].forEach(function (k) { if (sh[k] !== "" && sh[k] != null) p[k] = sh[k]; });
+      if (sh.stats) p.stats = Object.assign({}, p.stats || {}, sh.stats);
+      if (!p.portrait && !p.art && sh.avatar) p.portrait = sh.avatar;
+    });
+  }
+  function sheetTick() {
+    var c = hpCfg(); if (!c.url || UNDER || !D) return;
+    var ids = (D.party || []).map(ddbId).filter(Boolean); if (!ids.length) return;
+    var base = c.url.replace(/\/+$/, "");
+    Promise.all(ids.map(function (id) {
+      return fetch(base + "/sheet?id=" + id + "&t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) { SHEET[id] = j; }).catch(function () {});
+    })).then(function () {
+      var sig = JSON.stringify(SHEET);
+      if (sig !== SHEETSIG) { SHEETSIG = sig; render(); }
+    });
+  }
+  (function sheetLoop() { sheetTick(); setTimeout(sheetLoop, 60000); })();
+
   (function hpLoop() { hpTick(); setTimeout(hpLoop, Math.max(2, +(hpCfg().seconds || 4)) * 1000); })();
 
   // When a later window sits on top of an earlier frame (GM cam over the battle map), cut it out of the earlier frame.
@@ -785,6 +809,7 @@
 
   function render() {
     if (BUILD == null) BUILD = D.build;
+    applySheets();
     var L = layout();
     if (UNDER) { renderUnder(L); return; }
     if (!bg) { buildBackground(L.lines); stage.insertAdjacentHTML("beforeend", SHARED_DEFS); }
@@ -856,5 +881,5 @@
   });
 
   /* ---------------- go ---------------- */
-  loadData(function (d) { if (!d) return; D = d; lastSig = JSON.stringify(d); render(); hpTick(); setInterval(poll, POLL_MS); });
+  loadData(function (d) { if (!d) return; D = d; lastSig = JSON.stringify(d); render(); hpTick(); sheetTick(); setInterval(poll, POLL_MS); });
 })();

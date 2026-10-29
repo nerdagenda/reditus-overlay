@@ -218,7 +218,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function renderParty() {
     var root = $("s-party"); root.innerHTML = "";
     var intro = document.createElement("p"); intro.className = "hint";
-    intro.innerHTML = "Order here is the seat order on every screen. <b>Camera window</b> off = no window (like Verris). Each player's idle loop always plays on the <b>bottom layer</b>, under their camera, so it shows whenever their camera is off. <b>Transparent bottom loop</b> hides it. <b>Cover camera with loop</b> puts the loop on the top layer, over their camera, to cover it remotely.";
+    intro.innerHTML = "Order here is the seat order on every screen. <b>Camera window</b> off = no window (like Verris). Each player's idle loop always plays on the <b>bottom layer</b>, under their camera, so it shows whenever their camera is off. <b>Transparent bottom loop</b> hides it. <b>Cover camera with loop</b> puts the loop on the top layer, over their camera, to cover it remotely. For characters with a D&amp;D Beyond link, level, race, class, AC, max HP and ability scores come straight from their sheet (checked every minute), so leveling up on D&amp;D Beyond updates the stream by itself. Untick <b>Stats from D&amp;D Beyond</b> to type them in by hand instead.";
     root.appendChild(intro);
     S.party.forEach(function (p, idx) {
       var c = document.createElement("div"); c.className = "card" + (p.seat === false ? " off" : "");
@@ -252,6 +252,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       r.appendChild(check("Transparent bottom loop", !!p.underHidden, function (v) { p.underHidden = v; }, "p-" + idx + "-under"));
       r.appendChild(check("Cover camera with loop (top layer)", p.mode === "art", function (v) { p.mode = v ? "art" : "cam"; }, "p-" + idx + "-art"));
       r.appendChild(check("Card in scrolling bar", p.ticker !== false, function (v) { p.ticker = v; }, "p-" + idx + "-tick"));
+      if (p.ddb) r.appendChild(check("Stats from D&D Beyond (auto)", p.sheetSync !== false, function (v) { if (v) delete p.sheetSync; else p.sheetSync = false; }, "p-" + idx + "-sync"));
       c.appendChild(r);
       var r2 = document.createElement("div"); r2.className = "grid"; r2.style.marginTop = "10px";
       r2.appendChild(field("Portrait image path", p.portrait, function (v) { p.portrait = v; img.src = v; }, { id: "p-" + idx + "-img" }));
