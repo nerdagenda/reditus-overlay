@@ -41,6 +41,11 @@ export default {
         const ok = (v) => typeof v === "string" && /^[\w-]{1,40}$/.test(v) ? v : "";
         st.talk = { a: ok(body.talk.a), b: ok(body.talk.b) };
       }
+      // "Go live": { golive: { scene: "talk" } } → the overlay on screen in OBS switches OBS to that scene (once per press)
+      if (body.golive && typeof body.golive === "object") {
+        const sc = String(body.golive.scene || "").toLowerCase();
+        if (/^(main|spotlight|talk|map|gm|intro|break)$/.test(sc)) st.golive = { scene: sc, focus: /^[\w-]{1,40}$/.test(body.golive.focus || "") ? body.golive.focus : "", id: Date.now() };
+      }
       // manual conditions set by the DM: { conditions: { felix: ["banished", {id:"exhaustion",level:2}] } }  (null clears)
       if (body.conditions && typeof body.conditions === "object") {
         st.conditions = st.conditions || {};
@@ -87,7 +92,7 @@ export default {
       catch (e) { chars[id] = { error: String(e && e.message || e) }; }
     }));
     const st = await stP;
-    return json({ t: Date.now(), battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, talk: st ? st.talk || null : null, manual: st ? st.manual : {}, chars });
+    return json({ t: Date.now(), battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, talk: st ? st.talk || null : null, golive: st ? st.golive || null : null, manual: st ? st.manual : {}, chars });
   },
 };
 

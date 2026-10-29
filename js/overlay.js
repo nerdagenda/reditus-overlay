@@ -342,6 +342,7 @@
   var HPBARS = [];   // bars on screen right now
   var HPSIG = "";
   function ddbId(p) { var t = String((p && p.ddb) || ""), m = t.match(/characters\/(\d+)/) || t.match(/^\s*(\d{3,12})\s*$/); return m ? m[1] : ""; }
+  var GOLIVE_SEEN = null;
   var TALK = null, TALKLOCK = false; // conversation pair from the relay (control panel → Apply); TALKLOCK = preview showing an unapplied pick
   function talkPair() {
     var t = TALK || (D.scenes && D.scenes.talk) || {}, ids = [t.a, t.b];
@@ -410,14 +411,24 @@
   }
   function hpTick() {
     var c = hpCfg();
-    if (!c.url || UNDER || !D || SCENE === "sampler") return;
-    var ids = (D.party || []).map(ddbId).filter(Boolean);
+    if (!c.url || !D || SCENE === "sampler") return;
+    if (UNDER && SCENE !== "talk") return;   // bottom layers only need the relay to know who is in the conversation
+    var ids = UNDER ? [] : (D.party || []).map(ddbId).filter(Boolean);
     var u = c.url.replace(/\/+$/, "") + "/hp?ids=" + ids.join(",") + "&t=" + Date.now();
-    fetch(u, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+    return fetch(u, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j) return;
-      HP = j.chars || {}; MANUAL = j.manual || {}; CONDS = j.conditions || {};
       var nt = j.talk && j.talk.a ? j.talk : null;
-      if (!TALKLOCK) { if (SCENE === "talk" && JSON.stringify(nt) !== JSON.stringify(TALK)) { TALK = nt; render(); } else TALK = nt; } BATTLE = typeof j.battle === "boolean" ? j.battle : null;
+      if (!TALKLOCK) { if (SCENE === "talk" && JSON.stringify(nt) !== JSON.stringify(TALK)) { TALK = nt; render(); } else TALK = nt; }
+      if (UNDER) return;
+      // "Go live" from the control panel: the overlay that is on screen in OBS switches OBS to the asked-for scene (once per press)
+      var gl = j.golive && j.golive.id ? j.golive : null;
+      if (GOLIVE_SEEN == null) GOLIVE_SEEN = gl ? gl.id : 0;
+      else if (gl && gl.id !== GOLIVE_SEEN) {
+        GOLIVE_SEEN = gl.id;
+        if ((j.t || Date.now()) - gl.id < 30000 && window.ReditusOBS && window.ReditusOBS.switchTo) window.ReditusOBS.switchTo(gl.scene, gl.focus);
+      }
+      HP = j.chars || {}; MANUAL = j.manual || {}; CONDS = j.conditions || {};
+      BATTLE = typeof j.battle === "boolean" ? j.battle : null;
       MAPBARS = typeof j.mapBars === "boolean" ? j.mapBars : null;
       // battle switched or someone gained/lost a bar → rebuild the screen; otherwise just animate the bars
       var sig = hpOn() + "|" + (D.party || []).filter(hpEligible).map(function (p) { return p.id; }).join(",") + "|" + JSON.stringify((D.party || []).map(condsFor));
@@ -953,5 +964,11 @@
   }
 
   /* ---------------- go ---------------- */
-  loadData(function (d) { if (!d) return; D = d; lastSig = JSON.stringify(d); render(); hpTick(); sheetTick(); setInterval(poll, POLL_MS); });
+  loadData(function (d) {
+    if (!d) return; D = d; lastSig = JSON.stringify(d);
+    var started = false, go = function () { if (started) return; started = true; render(); if (!UNDER) sheetTick(); setInterval(poll, POLL_MS); };
+    // conversation screen: learn who is talking before the first draw, so it never flashes (or places cameras for) the wrong pair
+    if (SCENE === "talk" && hpCfg().url && !TALKLOCK) { var pr = hpTick(); setTimeout(go, 2500); if (pr && pr.then) pr.then(go, go); else go(); }
+    else { go(); hpTick(); }
+  });
 })();

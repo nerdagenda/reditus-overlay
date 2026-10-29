@@ -128,18 +128,18 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .conn.ok i { background: var(--good); box-shadow: 0 0 10px var(--good); } .conn.bad i { background: var(--bad); box-shadow: 0 0 10px var(--bad); }
 .conn .keyin { display: flex; gap: 8px; flex: 1 1 100%; }
 .conn .keyin input { flex: 1; min-width: 0; background: #071230; border: 1px solid var(--warn); padding: 10px; font-size: 16px; }
-.switches { display: grid; grid-template-columns: 1fr; gap: 12px; }
-.switch { display: grid; gap: 4px; text-align: left; padding: 18px 20px; min-height: 96px; cursor: pointer; background: var(--panel-2); border: 2px solid var(--line); }
-.switch b { font-size: 26px; letter-spacing: .02em; } .switch span { font-size: 16px; color: var(--muted); }
+.switches { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.switch { display: grid; gap: 4px; text-align: left; padding: 14px 14px; min-height: 84px; cursor: pointer; background: var(--panel-2); border: 2px solid var(--line); }
+.switch b { font-size: 21px; letter-spacing: .02em; } .switch span { font-size: 14px; color: var(--muted); }
 .switch:hover { border-color: var(--gold); }
 .switch[aria-pressed="true"] { background: linear-gradient(180deg, #c81e28, #6e0b13); border-color: #ff8a80; box-shadow: 0 0 22px rgba(255, 60, 60, .45); }
 .switch[aria-pressed="true"] span { color: #ffe1de; }
 .switch.map[aria-pressed="true"] { background: linear-gradient(180deg, #2f6a3a, #143018); border-color: #8fe08f; box-shadow: 0 0 18px rgba(120, 230, 120, .3); }
 .switch.map[aria-pressed="true"] span { color: #dcf7dc; }
 .talkgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-.tpick { position: relative; display: grid; justify-items: center; gap: 6px; padding: 10px 4px; background: var(--panel-2); border: 2px solid var(--line); cursor: pointer; font-size: 15px; min-width: 0; }
+.tpick { position: relative; display: grid; justify-items: center; gap: 4px; padding: 7px 4px; background: var(--panel-2); border: 2px solid var(--line); cursor: pointer; font-size: 15px; min-width: 0; }
 .tpick span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tpick img, .tpick .gmface { width: 62px; height: 62px; object-fit: cover; border: 1px solid var(--gold); background: #071230; display: grid; place-items: center; font-family: var(--display); color: var(--gold-hi); font-size: 22px; }
+.tpick img, .tpick .gmface { width: 50px; height: 50px; object-fit: cover; border: 1px solid var(--gold); background: #071230; display: grid; place-items: center; font-family: var(--display); color: var(--gold-hi); font-size: 22px; }
 .tpick:hover { border-color: var(--gold); }
 .tpick[data-side] { border-color: var(--gold-hi); background: linear-gradient(180deg, #3a2c14, #120d06); }
 .tpick[data-side]::after { content: attr(data-side); position: absolute; top: 5px; left: 5px; font-size: 13px; font-weight: 700; color: #1c1205; background: var(--gold-hi); padding: 2px 7px; }
@@ -148,6 +148,18 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .btn.big { padding: 14px 18px; font-size: 18px; min-height: 58px; }
 .talkstate { font-size: 16px; color: var(--muted); margin-top: 10px; line-height: 1.45; } .talkstate b { color: var(--text); }
 .talkstate .pend { color: var(--gold-hi); font-weight: 600; }
+.tpvhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 6px; font-size: 15px; font-weight: 600; color: var(--muted); }
+.tpvhead.pending span { color: var(--gold-hi); }
+.tpvhead.live span { color: #8fe08f; }
+.tthumb { pointer-events: none; }
+.tthumb.pending { box-shadow: 0 0 0 2px var(--gold-hi); }
+.tthumb.live { box-shadow: 0 0 0 2px #8fe08f; }
+.btn.step { width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.btn.step i { font-style: normal; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; background: rgba(0,0,0,.35); }
+.btn.golive { background: linear-gradient(180deg, #c81e28, #6e0b13); border-color: #ff8a80; color: #fff; font-weight: 700; }
+.btn.golive:hover:not(:disabled) { box-shadow: 0 0 18px rgba(255, 60, 60, .5); }
+.btn.step:disabled { opacity: .4; cursor: default; }
+.backmain { margin-top: 8px; }
 .lp { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(318px, 1fr)); }
 .lpc { min-width: 0; position: relative; background: var(--panel); border: 1px solid var(--line); padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; }
 .lpc.picking { z-index: 5; border-color: var(--gold); }
@@ -240,11 +252,12 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   <div class="panel">
     <h2>Conversation</h2>
     <div class="talkgrid" id="talk-grid" role="group" aria-label="Pick two characters"></div>
-    <div class="talkbar">
-      <button type="button" class="btn big" id="talk-swap">⇄ Swap</button>
-      <button type="button" class="btn big primary" id="talk-apply">Apply to conversation scene</button>
-    </div>
+    <div class="tpvhead"><span id="tpv-label">Preview</span><button type="button" class="btn small" id="talk-swap">⇄ Swap sides</button></div>
+    <div class="screen tthumb" id="tscreen"><iframe id="tpvu" title="Conversation preview, bottom layer" tabindex="-1"></iframe><iframe id="tpv" title="Conversation preview" tabindex="-1"></iframe></div>
+    <button type="button" class="btn big primary step" id="talk-apply"><i>1</i> Set up conversation screen</button>
+    <button type="button" class="btn big golive step" id="talk-live"><i>2</i> Go live to stream</button>
     <div class="talkstate" id="talk-state"></div>
+    <button type="button" class="btn small backmain" id="talk-back">Back to main party scene</button>
   </div>
  </div>
   <div>
@@ -890,17 +903,50 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       if (sel.a === id) b.setAttribute("data-side", "L"); else if (sel.b === id) b.setAttribute("data-side", "R"); else b.removeAttribute("data-side");
       b.classList.toggle("onair", !!live && (live.a === id || live.b === id));
     });
-    var pend = talkPick && (!live || talkPick.a !== live.a || talkPick.b !== live.b);
-    var ready = talkPick && talkPick.a && talkPick.b;
-    $("talk-apply").disabled = !(pend && ready);
-    st.innerHTML = (live ? "On air: <b>" + esc(nameOf(live.a)) + "</b> &amp; <b>" + esc(nameOf(live.b)) + "</b>" : "Nothing applied yet.") +
-      (talkPick && !ready ? '<br><span class="pend">Tap one more character.</span>' : pend ? '<br><span class="pend">Ready: ' + esc(nameOf(talkPick.a)) + " &amp; " + esc(nameOf(talkPick.b)) + ". Press Apply.</span>" : "");
+    var ready = !!(talkPick && talkPick.a && talkPick.b);
+    var pend = ready && (!live || talkPick.a !== live.a || talkPick.b !== live.b);
+    $("talk-apply").disabled = !pend;
+    $("talk-live").disabled = !(ready || (live && live.a && live.b));
+    st.innerHTML = (live ? "Conversation screen: <b>" + esc(nameOf(live.a)) + "</b> &amp; <b>" + esc(nameOf(live.b)) + "</b>" : "Conversation screen not set up yet.") +
+      (talkPick && !ready ? '<br><span class="pend">Tap one more character.</span>' : pend ? '<br><span class="pend">Not set up yet: press 1, or 2 to set up and go live at once.</span>' : "");
+    // thumbnail: what the conversation screen will look like (the pick if there is one, otherwise what's set up now)
+    var show = ready ? talkPick : live;
+    var h = $("tpv-label").parentNode, sc = $("tscreen");
+    h.classList.toggle("pending", !!pend); h.classList.toggle("live", !pend && !!live); sc.classList.toggle("pending", !!pend); sc.classList.toggle("live", !pend && !!live);
+    $("tpv-label").textContent = pend ? "Preview · not set up yet" : live ? "Preview · this is set up" : "Preview";
+    tpvSend(show);
+  }
+  // live thumbnail of the conversation screen (bottom loops + top overlay, like OBS stacks them)
+  var tpv = $("tpv"), tpvu = $("tpvu"), tscreen = $("tscreen"), tpvShown = "", tpvLoaded = false;
+  function tfit() { var k = "scale(" + (tscreen.clientWidth / 1920) + ")"; tpv.style.transform = k; tpvu.style.transform = k; }
+  addEventListener("resize", tfit); if ("ResizeObserver" in window) new ResizeObserver(tfit).observe(tscreen);
+  function tpvSend(t, force) {
+    if (!t || !t.a || !t.b || !tpvLoaded) return;
+    var sig = t.a + "|" + t.b; if (!force && sig === tpvShown) return; tpvShown = sig;
+    var msg = { type: "reditus:talk", talk: { a: t.a, b: t.b } };
+    [tpv, tpvu].forEach(function (f) { try { f.contentWindow.postMessage(msg, "*"); } catch (e) {} });
+  }
+  function tpvLoad() {
+    if (tpvLoaded) return; tpvLoaded = true;
+    var u = "index.html?scene=talk&t=" + Date.now();
+    var n = 0, onl = function () { if (++n < 2) return; setTimeout(function () { var l = LIVE.talk, t = talkPick && talkPick.a && talkPick.b ? talkPick : l; tpvSend(t, true); }, 300); };
+    tpv.addEventListener("load", onl); tpvu.addEventListener("load", onl);
+    tpvu.src = u + "&layer=under"; tpv.src = u; tfit();
   }
   $("talk-swap").addEventListener("click", function () { var c = talkPick || LIVE.talk; if (!c) return; talkPick = { a: c.b, b: c.a }; paintTalk(); });
   $("talk-apply").addEventListener("click", function () {
     if (!talkPick || !talkPick.a || !talkPick.b) return;
     var t = { a: talkPick.a, b: talkPick.b };
-    sendState({ talk: t }).then(function (j) { if (j) { LIVE.talk = t; talkPick = null; paintTalk(); status("Conversation scene updated.", "good"); } });
+    sendState({ talk: t }).then(function (j) { if (j) { LIVE.talk = t; talkPick = null; paintTalk(); status("Conversation screen set up. Not on stream until you press Go live.", "good"); } });
+  });
+  $("talk-live").addEventListener("click", function () {
+    var ready = talkPick && talkPick.a && talkPick.b, t = ready ? { a: talkPick.a, b: talkPick.b } : LIVE.talk;
+    if (!t || !t.a || !t.b) return;
+    var body = { golive: { scene: "talk" } }; if (ready) body.talk = t;
+    sendState(body).then(function (j) { if (j) { LIVE.talk = t; talkPick = null; paintTalk(); status("Going live: OBS switches to the conversation scene in a few seconds.", "good"); } });
+  });
+  $("talk-back").addEventListener("click", function () {
+    sendState({ golive: { scene: "main" } }).then(function (j) { if (j) status("Going back: OBS switches to the main party scene in a few seconds.", "good"); });
   });
 
   /* ---------- modes ---------- */
@@ -911,6 +957,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     ["live", "setup", "help"].forEach(function (x) { $("mode-" + x).hidden = x !== m; $("m-" + x).setAttribute("aria-selected", x === m ? "true" : "false"); });
     if (m === "setup" && !pv.src) reloadPreview();
     if (m === "setup") fit();
+    if (m === "live") { tpvLoad(); tfit(); }
   }
   ["live", "setup", "help"].forEach(function (x) { $("m-" + x).addEventListener("click", function () { setMode(x); }); });
 

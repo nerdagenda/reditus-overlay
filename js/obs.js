@@ -12,7 +12,7 @@
   "use strict";
   var q = new URLSearchParams(location.search);
   var PASS = q.get("obs");
-  if (PASS == null) { window.ReditusOBS = { place: function () {} }; return; }
+  if (PASS == null) { window.ReditusOBS = { place: function () {}, switchTo: function () {} }; return; }
   var PORT = +(q.get("obsport") || 4455), FIXED_SCENE = q.get("obsscene") || "", DEBUG = q.get("obsdebug") === "1";
   var ws = null, ready = false, reqN = 0, pending = {}, sceneName = FIXED_SCENE, canvasK = 1, lastSig = "", wanted = null, retry = null, stateMsg = "starting";
 
@@ -75,7 +75,14 @@
   // find the OBS scene that holds this overlay (a browser source whose URL is this screen's top layer)
   function findScene() {
     if (sceneName) return Promise.resolve(sceneName);
-    var mine = new URLSearchParams(location.search), myScene = (mine.get("scene") || "main").toLowerCase();
+    var mine = new URLSearchParams(location.search);
+    return findSceneFor((mine.get("scene") || "main").toLowerCase(), mine.get("focus") || "").then(function (n) { sceneName = n; return n; });
+  }
+  // the OBS scene holding the top-layer overlay for a given overlay screen (main, talk, spotlight + focus, …)
+  var FOUND = {};
+  function findSceneFor(myScene, myFocus) {
+    var fk = myScene + "|" + (myScene === "spotlight" ? myFocus : "");
+    if (FOUND[fk]) return Promise.resolve(FOUND[fk]);
     return call("GetInputList", { inputKind: "browser_source" }).then(function (r) {
       var inputs = (r.inputs || []);
       return batch(inputs.map(function (i) { return { requestType: "GetInputSettings", requestData: { inputName: i.inputName } }; })).then(function (res) {
@@ -84,15 +91,15 @@
           var u = ((x.responseData || {}).inputSettings || {}).url || "";
           if (!/reditus-overlay|index\.html/i.test(u) || /layer=under/i.test(u)) return;
           var sc = ((u.split("?")[1] || "").match(/(?:^|&)scene=([^&]+)/) || [, "main"])[1].toLowerCase();
-          if (sc === myScene && (myScene !== "spotlight" || ((u.match(/focus=([^&]+)/) || [])[1] || "") === (mine.get("focus") || ""))) names.push(inputs[k].inputName);
+          if (sc === myScene && (myScene !== "spotlight" || !myFocus || ((u.match(/focus=([^&]+)/) || [])[1] || "") === myFocus)) names.push(inputs[k].inputName);
         });
-        if (!names.length) throw new Error("couldn't find this overlay's browser source in OBS — add &obsscene=YourSceneName to the URL");
+        if (!names.length) throw new Error("couldn't find the “" + myScene + "” overlay's browser source in OBS" + (myScene === (q.get("scene") || "main").toLowerCase() ? " — add &obsscene=YourSceneName to the URL" : ""));
         return call("GetSceneList").then(function (sl) {
           var scenes = (sl.scenes || []).map(function (s) { return s.sceneName; });
           return batch(scenes.map(function (n) { return { requestType: "GetSceneItemList", requestData: { sceneName: n } }; })).then(function (lists) {
             for (var i = 0; i < lists.length; i++) {
               var items = ((lists[i].responseData || {}).sceneItems || []);
-              if (items.some(function (it) { return names.indexOf(it.sourceName) >= 0; })) { sceneName = scenes[i]; return sceneName; }
+              if (items.some(function (it) { return names.indexOf(it.sourceName) >= 0; })) { FOUND[fk] = scenes[i]; return scenes[i]; }
             }
             throw new Error("found the overlay source but not its scene — add &obsscene=YourSceneName to the URL");
           });
@@ -152,7 +159,17 @@
     }).catch(function (e) { lastSig = ""; say(e.message, true); });
   }
 
+  // switch what's on stream (control panel → "Go live to stream")
+  function switchTo(scene, focus) {
+    scene = String(scene || "").toLowerCase(); if (!scene) return;
+    if (!ready) { say("asked to go live on “" + scene + "” but not connected to OBS", true); return; }
+    findSceneFor(scene, focus || "").then(function (n) {
+      return call("SetCurrentProgramScene", { sceneName: n }).then(function () { say("went live: switched OBS to “" + n + "”"); });
+    }).catch(function (e) { delete FOUND[scene + "|" + (scene === "spotlight" ? focus || "" : "")]; say("couldn't go live: " + e.message, true); });
+  }
+
   window.ReditusOBS = {
+    switchTo: switchTo,
     place: function (slots) { wanted = slots; apply(slots); },
     status: function () { return stateMsg; },
   };
