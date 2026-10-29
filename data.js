@@ -163,7 +163,8 @@ window.REDITUS = {
       },
       "portrait": "assets/portraits/verris.jpg",
       "video": "assets/idle/verris.mp4?v=15",
-      "art": "assets/idle/verris.jpg?v=15"
+      "art": "assets/idle/verris.jpg?v=15",
+      "ddb": "https://www.dndbeyond.com/characters/155238475"
     },
     {
       "id": "atlas",
