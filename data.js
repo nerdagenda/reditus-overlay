@@ -1,6 +1,6 @@
 /* ==========================================================================
    THE REDITUS CAMPAIGN — LIVE OVERLAY DATA
-   Saved from the control panel (control.html) on 10/28/2026, 10:37:02 PM.
+   Saved from the control panel (control.html) on 10/29/2026, 2:59:54 PM.
    You can still edit this by hand; the control panel will read it back.
    Bump `build` only when the overlay CODE changes (forces a full reload).
    ========================================================================== */
@@ -146,7 +146,7 @@ window.REDITUS = {
       "id": "verris",
       "name": "Verris",
       "fullName": "Verris",
-      "seat": true,
+      "seat": false,
       "mode": "cam",
       "ticker": true,
       "level": 11,
@@ -171,7 +171,7 @@ window.REDITUS = {
       "id": "atlas",
       "name": "A.T.L.A.S",
       "fullName": "A.T.L.A.S",
-      "seat": true,
+      "seat": false,
       "mode": "cam",
       "ticker": false,
       "level": 8,
