@@ -151,7 +151,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .tpvhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 6px; font-size: 15px; font-weight: 600; color: var(--muted); }
 .tpvhead.pending span { color: var(--gold-hi); }
 .tpvhead.isset span { color: #8fe08f; }
-.tthumb { pointer-events: none; }
+.tthumb iframe { pointer-events: none; }
 .tthumb.pending { box-shadow: 0 0 0 2px var(--gold-hi); }
 .tthumb.isset { box-shadow: 0 0 0 2px #8fe08f; }
 .btn.step { width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -205,6 +205,10 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .rail .obsbar { grid-template-columns: minmax(0, 1fr); }
 .rail .obsbar .obsnow { padding: 2px 10px; }
 .rail .obsbar .oscene { flex: 1 1 calc(50% - 8px); }
+.ptools { position: absolute; top: 8px; right: 8px; z-index: 8; display: flex; gap: 6px; opacity: .25; transition: opacity .15s; }
+.screen:hover .ptools, .ytbox:hover .ptools, .ptools:focus-within, :fullscreen .ptools { opacity: 1; }
+.ptools button { font: 600 14px var(--body, Inter, sans-serif); min-height: 34px; padding: 6px 11px; color: #1c1205; background: var(--gold-hi); border: 0; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.45); }
+.screen:fullscreen, .ytbox:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto; background: #000; box-shadow: none; }
 /* arranging */
 .arranging [data-panel] { position: relative; outline: 2px dashed rgba(233, 185, 121, .55); outline-offset: 3px; cursor: grab; }
 .arranging [data-panel] > * { pointer-events: none; }
@@ -1054,10 +1058,53 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     h.classList.toggle("pending", !!pend); h.classList.toggle("isset", !pend && !!live); sc.classList.toggle("pending", !!pend); sc.classList.toggle("isset", !pend && !!live);
     $("tpv-label").textContent = pend ? "Preview · not set up yet" : live ? "Preview · this is set up" : "Preview";
     tpvSend(show);
+    popSend("talk", show && show.a && show.b ? { type: "reditus:talk", talk: { a: show.a, b: show.b } } : null);
   }
+  /* ---------- previews: full screen + pop-out windows ---------- */
+  function fitFrames(box, frames) {   // letterbox a 1920×1080 overlay into its box (also when the box is full screen)
+    var w = box.clientWidth, h = box.clientHeight || w * 9 / 16, k = Math.min(w / 1920, h / 1080);
+    var t = "translate(" + ((w - 1920 * k) / 2) + "px," + ((h - 1080 * k) / 2) + "px) scale(" + k + ")";
+    frames.forEach(function (f) { f.style.transform = t; });
+  }
+  var POPS = {}, POPLAST = {};
+  function popUrl(id) {
+    if (id === "setup") { var sc = $("pv-scene").value; return "preview.html?id=setup&scene=" + sc + (sc === "spotlight" ? "&focus=" + encodeURIComponent($("pv-focus").value || "") : "") + ($("pv-art").checked ? "&under=1" : ""); }
+    if (id === "talk") return "preview.html?id=talk&scene=talk&under=1";
+    if (id === "yt") return "preview.html?id=yt&yt=" + encodeURIComponent(YT.live ? YT.videoId : "none");
+  }
+  function openPop(id) {
+    var w = POPS[id], url = popUrl(id);
+    if (w && !w.closed) { w.location.href = url; w.focus(); return; }
+    // a separate window you can drag anywhere (another monitor) and make full screen
+    POPS[id] = window.open(url, "reditus-pop-" + id, "popup=yes,width=960,height=540,left=" + (screenX + 80) + ",top=" + (screenY + 80));
+    if (!POPS[id]) status("The browser blocked the pop-out window. Allow pop-ups for this page and try again.", "bad");
+  }
+  function popSend(id, msg) {
+    if (msg) POPLAST[id] = msg;
+    var w = POPS[id]; if (!w || w.closed || !msg) return;
+    try { w.postMessage(msg, "*"); } catch (e) {}
+  }
+  addEventListener("message", function (e) {
+    if (!e.data || e.data.type !== "reditus:popup-ready") return;
+    var id = e.data.id;
+    if (id === "setup") pushPreview(true);
+    else if (POPLAST[id]) popSend(id, POPLAST[id]);
+  });
+  function addTools(box, id, refit) {
+    var t = document.createElement("div"); t.className = "ptools";
+    var fs = document.createElement("button"); fs.type = "button"; fs.textContent = "⛶"; fs.title = "Full screen (Esc to leave)"; fs.setAttribute("aria-label", "Full screen");
+    fs.addEventListener("click", function (e) { e.stopPropagation(); if (document.fullscreenElement === box) document.exitFullscreen(); else (box.requestFullscreen ? box.requestFullscreen() : Promise.reject()).catch(function () { status("Full screen isn't available here; try Pop out.", "bad"); }); });
+    var po = document.createElement("button"); po.type = "button"; po.textContent = "⧉ Pop out"; po.title = "Open in its own window you can move anywhere and make full screen";
+    po.addEventListener("click", function (e) { e.stopPropagation(); openPop(id); });
+    t.appendChild(fs); t.appendChild(po); box.appendChild(t);
+    if (refit) { box.addEventListener("fullscreenchange", function () { setTimeout(refit, 50); }); }
+  }
+  document.addEventListener("fullscreenchange", function () { setTimeout(function () { fit(); tfit(); }, 60); });
+
   // live thumbnail of the conversation screen (bottom loops + top overlay, like OBS stacks them)
   var tpv = $("tpv"), tpvu = $("tpvu"), tscreen = $("tscreen"), tpvShown = "", tpvLoaded = false;
-  function tfit() { var k = "scale(" + (tscreen.clientWidth / 1920) + ")"; tpv.style.transform = k; tpvu.style.transform = k; }
+  addTools(tscreen, "talk", function () { tfit(); }); addTools($("yt-box"), "yt"); addTools($("screen"), "setup", function () { fit(); });
+  function tfit() { fitFrames(tscreen, [tpv, tpvu]); }
   addEventListener("resize", tfit); if ("ResizeObserver" in window) new ResizeObserver(tfit).observe(tscreen);
   function tpvSend(t, force) {
     if (!t || !t.a || !t.b || !tpvLoaded) return;
@@ -1065,6 +1112,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var msg = { type: "reditus:talk", talk: { a: t.a, b: t.b } };
     [tpv, tpvu].forEach(function (f) { try { f.contentWindow.postMessage(msg, "*"); } catch (e) {} });
   }
+  function talkShown() { var l = LIVE.talk; return talkPick && talkPick.a && talkPick.b ? talkPick : l; }
   function tpvLoad() {
     if (tpvLoaded) return; tpvLoaded = true;
     var u = "index.html?scene=talk&t=" + Date.now();
@@ -1114,6 +1162,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       YT.live = !!j.live; YT.videoId = j.videoId || ""; YT.upcoming = !!j.upcoming; YT.err = j.error || ""; YT.checked = Date.now();
       // went live: open the preview by itself (unless it was closed by hand during this same stream)
       if (YT.live && !was && YT.userSet !== YT.videoId) setFold($("yt-panel"), true, false);
+      if (YT.live !== was && POPS.yt && !POPS.yt.closed) openPop("yt");
       paintYt();
     }).catch(function () { YT.err = "Can't reach the relay"; paintYt(); });
   }
@@ -1125,15 +1174,15 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var msg = YT.err === "off" ? "Turned off in Setup → Show & GM." : YT.err ? "Couldn't check YouTube (" + YT.err + ")." : YT.upcoming ? "A stream is scheduled but hasn't started. The preview appears when it goes live." : YT.checked ? "Not live right now. The preview pops up by itself when the stream starts." : "Checking if the channel is live…";
     var key = want ? "v:" + want : "m:" + msg;
     if (key === YT.shown) return;
-    YT.shown = key; box.innerHTML = "";
+    YT.shown = key; Array.prototype.slice.call(box.children).forEach(function (n) { if (!n.classList.contains("ptools")) n.remove(); });
     if (want) {
       var f = document.createElement("iframe"); f.title = "YouTube live preview (muted)";
       f.allow = "autoplay; encrypted-media; picture-in-picture"; f.referrerPolicy = "strict-origin-when-cross-origin";
       f.src = "https://www.youtube.com/embed/" + want + "?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1";
-      box.appendChild(f);
+      box.insertBefore(f, box.firstChild);
     } else {
       var m = document.createElement("div"); m.className = "ytmsg"; m.textContent = msg;
-      box.appendChild(m);
+      box.insertBefore(m, box.firstChild);
     }
   }
   setInterval(ytPoll, 60000);
@@ -1350,7 +1399,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
   /* ---------- preview ---------- */
   var pv = $("pv"), pvu = $("pvu"), screen = $("screen");
-  function fit() { var t = "scale(" + (screen.clientWidth / 1920) + ")"; pv.style.transform = t; pvu.style.transform = t; }
+  function fit() { fitFrames(screen, [pv, pvu]); }
   addEventListener("resize", fit); if ("ResizeObserver" in window) new ResizeObserver(fit).observe(screen); fit();
   function pvUrl() {
     var sc = $("pv-scene").value, u = "index.html?t=" + Date.now() + "&scene=" + sc;
@@ -1362,6 +1411,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     pv.src = pvUrl();
     pvu.hidden = !$("pv-art").checked;
     if (!pvu.hidden) pvu.src = pvUrl() + "&layer=under";
+    if (POPS.setup && !POPS.setup.closed) openPop("setup");
   }
   pv.addEventListener("load", function () { pushPreview(true); });
   pvu.addEventListener("load", function () { pushPreview(true); });
@@ -1369,7 +1419,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function pushPreview(now) {
     clearTimeout(pvTimer);
     pvTimer = setTimeout(function () { if (!S) return; var msg = { type: "reditus:data", data: JSON.parse(JSON.stringify(S)) };
-      [pv, pvu].forEach(function (f) { try { if (!f.hidden && f.contentWindow) f.contentWindow.postMessage(msg, "*"); } catch (e) {} }); }, now ? 200 : 350);
+      [pv, pvu].forEach(function (f) { try { if (!f.hidden && f.contentWindow) f.contentWindow.postMessage(msg, "*"); } catch (e) {} }); popSend("setup", msg); }, now ? 200 : 350);
   }
   ["pv-scene", "pv-focus", "pv-art"].forEach(function (id) { $(id).addEventListener("change", reloadPreview); });
   $("pv-next").addEventListener("click", function () { try { pv.contentWindow.postMessage("reditus:next", "*"); } catch (e) {} });
