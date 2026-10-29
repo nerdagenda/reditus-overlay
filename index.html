@@ -7,10 +7,12 @@
   // always load the newest code (GitHub Pages lets browsers cache files for 10 minutes)
   var V = Date.now();
   document.write('<link rel="stylesheet" href="css/overlay.css?v=' + V + '">');
+  document.write('<link rel="stylesheet" href="css/conditions.css?v=' + V + '">');
 </script>
 </head>
 <body>
 <div id="stage"></div>
+<script>document.write('<script src="js/conditions.js?v=' + V + '"><\/script>');</script>
 <script>document.write('<script src="js/overlay.js?v=' + V + '"><\/script>');</script>
 </body>
 </html>

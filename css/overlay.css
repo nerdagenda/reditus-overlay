@@ -47,7 +47,7 @@ body { width: 100vw; height: 100vh; }
 #bg svg, #bg canvas { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
 
 /* ---------------- Frames ---------------- */
-.frame { position: absolute; pointer-events: none; }
+.frame { position: absolute; pointer-events: none; isolation: isolate; }
 .frame .edge {
   position: absolute; inset: 0;
   border-style: solid; border-color: transparent;

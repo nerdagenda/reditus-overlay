@@ -128,6 +128,21 @@
       var nl2 = Math.ceil(party.length / 2);
       column(nl2, 64, 191, 291, 189, 291 / 189, 611, 22).forEach(function (r, i) { pSlot(party[i], r, "s"); });
       column(party.length - nl2, 1565, 191, 291, 189, 291 / 189, 611, 22).forEach(function (r, i) { pSlot(party[nl2 + i], r, "s"); });
+    } else if (SCENE === "sampler") {
+      // condition-effect sampler: one window per condition (or ?cond=banished for one big window)
+      L.lines = "fan";
+      var SM = [["banished"], ["poisoned"], ["frightened"], ["charmed"], ["stunned"], ["paralyzed"], ["petrified"], ["restrained"],
+        ["grappled"], ["blinded"], ["invisible"], ["raging"], ["concentrating"], [{ id: "exhaustion", level: 4 }], ["prone", "deafened", "incapacitated", "unconscious"], ["poisoned", "concentrating", "prone", { id: "exhaustion", level: 2 }]];
+      var CN = (window.ReditusConditions && window.ReditusConditions.byId) || {};
+      var pool = (D.party || []).filter(function (p) { return p.portrait; });
+      var one = (q.get("cond") || "").toLowerCase();
+      if (one) SM = SM.filter(function (c) { return (c[0].id || c[0]) === one; }).slice(0, 1);
+      var rects = one ? [{ x: 360, y: 150, w: 1200, h: 675 }] : grid(SM.length, { x: 50, y: 40, w: 1820, h: 980 }, 4, 16 / 9, 40, 62);
+      SM.forEach(function (cs, i) {
+        var who = Object.assign({}, pool[i % Math.max(1, pool.length)] || {}, { conditions: cs, mode: "cam", ddb: "" });
+        var label = cs.length > 2 ? (cs.length === 4 && cs[0] === "prone" ? "Marker only" : "Stacked") : (CN[cs[0].id || cs[0]] || {}).name || cs[0];
+        slots.push({ id: "s" + i, label: label, who: who, x: rects[i].x, y: rects[i].y, w: rects[i].w, h: rects[i].h, size: one ? "l" : "s", npPos: "bottom" });
+      });
     } else if (SCENE === "break") {
       L.lines = "fan"; L.holes = false; L.brk = true;
     } else if (SCENE === "intro") {
@@ -297,6 +312,10 @@
     var sh = el("div", "shine", f); sh.style.padding = px(t);
     sh.style.setProperty("--sweep-delay", (-(idx * 2.1) % 14).toFixed(1) + "s");
     corners(f, z.k, ["tl", "tr", "br", "bl"]);
+    if (!s.map && s.who && s.id !== "gm" && window.ReditusConditions) {
+      var cl = condsFor(s.who);
+      if (cl.length) window.ReditusConditions.apply(f, s, t, cl);
+    }
     if (!s.map && s.label) {
       var cx = s.x + s.w / 2, cy = s.npPos === "top" ? s.y - t / 2 : s.y + s.h + t / 2;
       var npSize = s.w < 260 ? "xs" : z.np;
@@ -326,6 +345,16 @@
     var ddOk = dd && !dd.error && dd.max ? dd : null;
     if (m) return { max: m.max || (ddOk && ddOk.max) || p.hp || 1, current: m.current, temp: m.temp || 0, manual: true };
     return ddOk;
+  }
+  // conditions show whenever the HP bars do (battle mode / battle map); the sampler always shows them
+  var CONDS = {}; // party id → manual conditions from the relay
+  function condsFor(p) {
+    if (SCENE === "sampler") return p.conditions || [];
+    if (!hpOn()) return [];
+    var dd = HP[ddbId(p)], list = [];
+    if (dd && dd.conditions) list = list.concat(dd.conditions);
+    if (CONDS[p.id]) list = list.concat(CONDS[p.id]);
+    return list;
   }
   function hpEligible(p) { return !!(p && (MANUAL[p.id] || ddbId(p))); }
   function hpBar(parent, s, npTop) {
@@ -370,10 +399,10 @@
     var u = c.url.replace(/\/+$/, "") + "/hp?ids=" + ids.join(",") + "&t=" + Date.now();
     fetch(u, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j) return;
-      HP = j.chars || {}; MANUAL = j.manual || {}; BATTLE = typeof j.battle === "boolean" ? j.battle : null;
+      HP = j.chars || {}; MANUAL = j.manual || {}; CONDS = j.conditions || {}; BATTLE = typeof j.battle === "boolean" ? j.battle : null;
       MAPBARS = typeof j.mapBars === "boolean" ? j.mapBars : null;
       // battle switched or someone gained/lost a bar → rebuild the screen; otherwise just animate the bars
-      var sig = hpOn() + "|" + (D.party || []).filter(hpEligible).map(function (p) { return p.id; }).join(",");
+      var sig = hpOn() + "|" + (D.party || []).filter(hpEligible).map(function (p) { return p.id; }).join(",") + "|" + JSON.stringify((D.party || []).map(condsFor));
       if (sig !== HPSIG) { HPSIG = sig; render(); }
       (D.party || []).forEach(function (p) {
         var h = hpFor(p); if (!h) return;
@@ -815,7 +844,7 @@
     if (!bg) { buildBackground(L.lines); stage.insertAdjacentHTML("beforeend", SHARED_DEFS); }
     setHoles(L.holes ? L.slots : []);
 
-    if (PREVIEW) {
+    if (PREVIEW || SCENE === "sampler") {
       var fk = document.getElementById("fakecams") || el("div", "", null);
       fk.id = "fakecams"; fk.innerHTML = ""; stage.insertBefore(fk, bg);
       L.slots.forEach(function (s) {
