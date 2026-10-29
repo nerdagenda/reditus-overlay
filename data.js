@@ -39,7 +39,8 @@ window.REDITUS = {
       },
       "portrait": "assets/portraits/trey.jpg",
       "video": "assets/idle/trey.mp4?v=15",
-      "art": "assets/idle/trey.jpg?v=15"
+      "art": "assets/idle/trey.jpg?v=15",
+      "ddb": "https://www.dndbeyond.com/characters/167224485"
     },
     {
       "id": "darius",
@@ -52,7 +53,7 @@ window.REDITUS = {
       "race": "Half-Elf",
       "cls": "Bard",
       "ac": 18,
-      "hp": 70,
+      "hp": 86,
       "stats": {
         "str": 8,
         "dex": 16,
@@ -63,7 +64,8 @@ window.REDITUS = {
       },
       "portrait": "assets/portraits/darius.jpg",
       "video": "assets/idle/darius.mp4?v=15",
-      "art": "assets/idle/darius.jpg?v=15"
+      "art": "assets/idle/darius.jpg?v=15",
+      "ddb": "https://www.dndbeyond.com/characters/145056951"
     },
     {
       "id": "lapadis",
@@ -87,7 +89,8 @@ window.REDITUS = {
       },
       "portrait": "assets/portraits/lapadis.jpg",
       "video": "assets/idle/lapadis.mp4?v=15",
-      "art": "assets/idle/lapadis.jpg?v=15"
+      "art": "assets/idle/lapadis.jpg?v=15",
+      "ddb": "https://www.dndbeyond.com/characters/145147360"
     },
     {
       "id": "felix",
@@ -135,7 +138,8 @@ window.REDITUS = {
       },
       "portrait": "assets/portraits/jak.jpg",
       "video": "assets/idle/jak.mp4?v=15",
-      "art": "assets/idle/jak.jpg?v=15"
+      "art": "assets/idle/jak.jpg?v=15",
+      "ddb": "https://www.dndbeyond.com/characters/120665466"
     },
     {
       "id": "verris",
@@ -183,7 +187,8 @@ window.REDITUS = {
       },
       "portrait": "assets/portraits/atlas.jpg",
       "video": "assets/idle/atlas.mp4?v=15",
-      "art": "assets/idle/atlas.jpg?v=15"
+      "art": "assets/idle/atlas.jpg?v=15",
+      "ddb": "https://www.dndbeyond.com/characters/120974167"
     }
   ],
   "ticker": {
