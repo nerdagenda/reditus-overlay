@@ -118,7 +118,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
    left rail: connection, the two switches, conversation picker · right: party grid (3 across at 1920) */
 .live { --lf: 17px; font-size: var(--lf); max-width: 1900px; margin: 0 auto; padding: 16px max(16px, env(safe-area-inset-right)) 40px max(16px, env(safe-area-inset-left));
   display: grid; grid-template-columns: minmax(380px, 470px) minmax(0, 1fr); gap: 18px; align-items: start; }
-.live .rail { display: grid; gap: 14px; position: sticky; top: 76px; }
+.live .rail { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow-y: auto; scrollbar-width: thin; padding-right: 2px; }
 @media (max-width: 1100px) { .live { grid-template-columns: minmax(0, 1fr); } .live .rail { position: static; } }
 .live h2 { font-family: var(--display); font-size: 17px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold-hi); margin: 0 0 12px; font-weight: 600; }
 .live .panel { background: var(--panel); border: 1px solid var(--line); padding: 16px; }
@@ -150,16 +150,41 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .talkstate .pend { color: var(--gold-hi); font-weight: 600; }
 .tpvhead { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 6px; font-size: 15px; font-weight: 600; color: var(--muted); }
 .tpvhead.pending span { color: var(--gold-hi); }
-.tpvhead.live span { color: #8fe08f; }
+.tpvhead.isset span { color: #8fe08f; }
 .tthumb { pointer-events: none; }
 .tthumb.pending { box-shadow: 0 0 0 2px var(--gold-hi); }
-.tthumb.live { box-shadow: 0 0 0 2px #8fe08f; }
+.tthumb.isset { box-shadow: 0 0 0 2px #8fe08f; }
 .btn.step { width: 100%; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
 .btn.step i { font-style: normal; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; background: rgba(0,0,0,.35); }
 .btn.golive { background: linear-gradient(180deg, #c81e28, #6e0b13); border-color: #ff8a80; color: #fff; font-weight: 700; }
 .btn.golive:hover:not(:disabled) { box-shadow: 0 0 18px rgba(255, 60, 60, .5); }
 .btn.step:disabled { opacity: .4; cursor: default; }
 .backmain { margin-top: 8px; }
+.live .panel.fold { padding: 0; }
+.phead { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 14px 16px; cursor: pointer; color: inherit; text-align: left; min-height: 56px; }
+.phead h2 { margin: 0 !important; }
+.phead:hover h2 { color: #fff; }
+.chev { display: inline-block; color: var(--gold-hi); font-size: 18px; transition: transform .15s; }
+.phead .chev { margin-left: auto; }
+.fold.closed .phead .chev, .tpvtoggle[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+.pbody { padding: 0 16px 16px; }
+.fold.closed .pbody { display: none; }
+.ytstate { font-size: 14px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+.ytstate.onair { color: #fff; background: #c81e28; padding: 3px 9px; letter-spacing: .08em; }
+.ytstate.onair::before { content: "● "; }
+.ytbox { position: relative; aspect-ratio: 16 / 9; background: #000; box-shadow: 0 0 0 1px var(--line); display: grid; place-items: center; overflow: hidden; }
+.ytbox iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.ytmsg { padding: 16px; text-align: center; font-size: 16px; color: var(--muted); line-height: 1.45; }
+.ythint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.tpvtoggle { background: none; border: 0; padding: 6px 2px; color: inherit; font: inherit; cursor: pointer; display: flex; align-items: center; gap: 6px; min-height: 40px; }
+.tthumb.shut { display: none; }
+.lpmore .adjtog { font-weight: 600; }
+.lpmore .adjtog::after { content: " ▸"; } .lpmore .adjtog.open::after { content: " ▾"; }
+.lpmore .lpuse { display: none; border-color: var(--warn); color: var(--warn); }
+.lpc.man .lpmore .lpuse { display: inline-block; }
+.lpmore .lpclr { margin-left: auto; }
+.lpadj { display: grid; gap: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.lpadj[hidden] { display: none; }
 .obsbar { display: grid; grid-template-columns: minmax(230px, 280px) minmax(0, 1fr); gap: 14px; align-items: stretch; background: var(--panel); border: 1px solid var(--line); padding: 12px; margin-bottom: 14px; }
 .obsnow { display: grid; align-content: center; gap: 2px; padding: 4px 12px; border-left: 6px solid #c81e28; }
 .obsnow small { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -266,15 +291,24 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     <button type="button" class="switch" id="b-battle" aria-pressed="false"><b>⚔ Battle mode</b><span>Off · HP bars hidden</span></button>
     <button type="button" class="switch map" id="b-mapbars" aria-pressed="true"><b>🗺 Map HP bars</b><span>On · battle map screen only</span></button>
   </div>
-  <div class="panel">
-    <h2>Conversation</h2>
+  <div class="panel fold" id="yt-panel" data-fold="yt">
+    <button type="button" class="phead" aria-expanded="true"><h2>YouTube</h2><span class="ytstate" id="yt-state">Checking…</span><span class="chev">▾</span></button>
+    <div class="pbody">
+      <div class="ytbox" id="yt-box"><div class="ytmsg" id="yt-msg">Checking if the channel is live…</div></div>
+      <div class="ythint">The stream as viewers see it, muted, about 10 to 30 seconds behind. Checks every minute.</div>
+    </div>
+  </div>
+  <div class="panel fold" id="talk-panel" data-fold="talk">
+    <button type="button" class="phead" aria-expanded="true"><h2>Conversation</h2><span class="ytstate" id="talk-mini"></span><span class="chev">▾</span></button>
+    <div class="pbody">
     <div class="talkgrid" id="talk-grid" role="group" aria-label="Pick two characters"></div>
-    <div class="tpvhead"><span id="tpv-label">Preview</span><button type="button" class="btn small" id="talk-swap">⇄ Swap sides</button></div>
+    <div class="tpvhead"><button type="button" class="tpvtoggle" id="tpv-toggle" aria-expanded="true"><span class="chev">▾</span> <span id="tpv-label">Preview</span></button><button type="button" class="btn small" id="talk-swap">⇄ Swap sides</button></div>
     <div class="screen tthumb" id="tscreen"><iframe id="tpvu" title="Conversation preview, bottom layer" tabindex="-1"></iframe><iframe id="tpv" title="Conversation preview" tabindex="-1"></iframe></div>
     <button type="button" class="btn big primary step" id="talk-apply"><i>1</i> Set up conversation screen</button>
     <button type="button" class="btn big golive step" id="talk-live"><i>2</i> Go live to stream</button>
     <div class="talkstate" id="talk-state"></div>
     <button type="button" class="btn small backmain" id="talk-back">Back to main party scene</button>
+    </div>
   </div>
  </div>
   <div>
@@ -419,6 +453,8 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
   /* ---------- tooltips: every Setup field with a ? explains itself ---------- */
   var TIPS = {
+    "YouTube channel (live preview)": "The channel Live mode watches. A UC… channel id or an @handle. When it goes live, a muted preview of the stream pops up in Live mode.",
+    "YouTube preview in Live mode": "Untick to hide the YouTube preview and stop checking whether the channel is live.",
     "Nameplate": "Short name shown under this player's camera window, e.g. Trey. Also used to find their OBS camera (\u201cTrey Cam\u201d).",
     "Full name (stat card)": "The full character name on their stat card in the scrolling bar.",
     "Level": "Character level on the stat card. Comes from D&D Beyond automatically when a sheet is linked.",
@@ -667,7 +703,11 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     g.appendChild(field("Episode number", S.show.episode, function (v) { S.show.episode = v; }, { type: "number", min: 1, id: "s-ep" }));
     g.appendChild(field("Schedule", S.show.schedule, function (v) { S.show.schedule = v; }, { id: "s-sched" }));
     g.appendChild(field("Intro screen line (optional)", S.show.introText, function (v) { S.show.introText = v; }, { id: "s-intro" }));
-    c.appendChild(g); root.appendChild(c);
+    g.appendChild(field("YouTube channel (live preview)", (S.youtube && S.youtube.channel) || "UCluuU9GKY067Vo0hfTTAndA", function (v) { S.youtube = S.youtube || {}; S.youtube.channel = v.trim(); YT.checked = 0; ytPoll(); }, { id: "s-yt" }));
+    c.appendChild(g);
+    var ry = document.createElement("div"); ry.className = "row";
+    ry.appendChild(check("YouTube preview in Live mode", !(S.youtube && S.youtube.preview === false), function (v) { S.youtube = S.youtube || {}; S.youtube.preview = v; ytPoll(); }, "s-ytp"));
+    c.appendChild(ry); root.appendChild(c);
     var d = document.createElement("div"); d.className = "card"; d.innerHTML = "<h3>Grand Master</h3>";
     var g2 = document.createElement("div"); g2.className = "grid";
     g2.appendChild(field("Nameplate", S.gm.label, function (v) { S.gm.label = v; }, { id: "g-label" }));
@@ -820,6 +860,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   }
   /* ---------- LIVE: party cards (HP + conditions) ---------- */
   var openPick = {};   // which characters have the condition picker open
+  var ADJ = {};   // which cards have the manual HP controls open (this session only)
   function renderBattle() {
     var root = $("live-party"); if (!root) return; root.innerHTML = "";
     // only characters with a camera window on (Setup → Party → Camera window); Verris-style NPCs stay off this list
@@ -828,18 +869,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       c.innerHTML = '<div class="lph"><img alt="" src="' + esc(p.portrait || "") + '"><div class="nm"><b title="' + esc(p.fullName || p.name) + '">' + esc(p.name || p.fullName) + '</b><small class="src"></small></div>' +
         '<div class="hpnum"><span class="cur">–</span><small> / <span class="max">–</span></small> <span class="tmp"></span></div></div>' +
         '<div class="lpbar"><i class="c"></i><i class="t"></i></div>';
-      var b = document.createElement("div"); b.className = "lpbtns";
-      [-10, -5, -1].forEach(function (n) { var x = btn(String(n).replace("-", "−"), function () { damage(p, -n); }, "dmg"); x.classList.remove("small"); x.setAttribute("aria-label", "Damage " + (p.name || "") + " " + (-n)); b.appendChild(x); });
-      [1, 5, 10].forEach(function (n) { var x = btn("+" + n, function () { heal(p, n); }, "heal"); x.classList.remove("small"); x.setAttribute("aria-label", "Heal " + (p.name || "") + " " + n); b.appendChild(x); });
-      c.appendChild(b);
-      var a = document.createElement("div"); a.className = "lpamt";
-      var amt = document.createElement("input"); amt.type = "number"; amt.min = 0; amt.inputMode = "numeric"; amt.placeholder = "#"; amt.id = "amt-" + p.id; amt.setAttribute("aria-label", "Amount for " + (p.name || ""));
-      a.appendChild(amt);
-      [["Damage", "dmg", function (n) { damage(p, n); }], ["Heal", "heal", function (n) { heal(p, n); }], ["Temp HP", "", function (n) { setHp(p, hpOf(p).current, n); }]].forEach(function (d) {
-        var x = btn(d[0], function () { var n = +amt.value; if (amt.value !== "" && n >= 0) { d[2](n); amt.value = ""; } else amt.focus(); }, d[1]); x.classList.remove("small"); a.appendChild(x);
-      });
-      amt.addEventListener("keydown", function (e) { if (e.key === "Enter") { var n = +amt.value; if (n > 0) { damage(p, n); amt.value = ""; } } });
-      c.appendChild(a);
+      // conditions up front; manual HP tucked away (HP comes from D&D Beyond almost always)
       var cr = document.createElement("div"); cr.className = "lpconds"; c.appendChild(cr);
       var pk = document.createElement("div"); pk.className = "cpick"; pk.hidden = !openPick[p.id]; pk.setAttribute("role", "group"); pk.setAttribute("aria-label", "Conditions for " + (p.name || ""));
       if (window.ReditusConditions) window.ReditusConditions.list.forEach(function (cd) {
@@ -850,11 +880,31 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       });
       c.appendChild(pk);
       var more = document.createElement("div"); more.className = "lpmore";
-      more.appendChild(btn("Full HP", function () { setHp(p, hpOf(p).max, 0); }));
-      more.appendChild(btn("Use sheet HP", function () { delete LIVE.manual[p.id]; delete hpPending[p.id]; var m = {}; m[p.id] = null; sendState({ manual: m }); paintBattle(); }));
-      more.appendChild(btn("Clear conditions", function () { setConds(p, []); }));
-      Array.prototype.forEach.call(more.children, function (x) { if (x.textContent === "Use sheet HP") x.title = "Stop using manual HP and follow their D&D Beyond sheet again"; });
+      var tog = btn("± Adjust HP", function () { ADJ[p.id] = !ADJ[p.id]; adj.hidden = !ADJ[p.id]; tog.setAttribute("aria-expanded", String(!!ADJ[p.id])); tog.classList.toggle("open", !!ADJ[p.id]); if (ADJ[p.id]) { var i = adj.querySelector("input"); if (i) i.focus(); } }, "adjtog");
+      tog.setAttribute("aria-expanded", String(!!ADJ[p.id])); tog.classList.toggle("open", !!ADJ[p.id]);
+      more.appendChild(tog);
+      var use = btn("Use sheet HP", function () { delete LIVE.manual[p.id]; delete hpPending[p.id]; var m = {}; m[p.id] = null; sendState({ manual: m }); paintBattle(); }, "lpuse");
+      use.title = "Stop using manual HP and follow their D&D Beyond sheet again";
+      more.appendChild(use);
+      more.appendChild(btn("Clear conditions", function () { setConds(p, []); }, "lpclr"));
       c.appendChild(more);
+      var adj = document.createElement("div"); adj.className = "lpadj"; adj.hidden = !ADJ[p.id];
+      var b = document.createElement("div"); b.className = "lpbtns";
+      [-10, -5, -1].forEach(function (n) { var x = btn(String(n).replace("-", "−"), function () { damage(p, -n); }, "dmg"); x.classList.remove("small"); x.setAttribute("aria-label", "Damage " + (p.name || "") + " " + (-n)); b.appendChild(x); });
+      [1, 5, 10].forEach(function (n) { var x = btn("+" + n, function () { heal(p, n); }, "heal"); x.classList.remove("small"); x.setAttribute("aria-label", "Heal " + (p.name || "") + " " + n); b.appendChild(x); });
+      adj.appendChild(b);
+      var a = document.createElement("div"); a.className = "lpamt";
+      var amt = document.createElement("input"); amt.type = "number"; amt.min = 0; amt.inputMode = "numeric"; amt.placeholder = "#"; amt.id = "amt-" + p.id; amt.setAttribute("aria-label", "Amount for " + (p.name || ""));
+      a.appendChild(amt);
+      [["Damage", "dmg", function (n) { damage(p, n); }], ["Heal", "heal", function (n) { heal(p, n); }], ["Temp HP", "", function (n) { setHp(p, hpOf(p).current, n); }]].forEach(function (d) {
+        var x = btn(d[0], function () { var n = +amt.value; if (amt.value !== "" && n >= 0) { d[2](n); amt.value = ""; } else amt.focus(); }, d[1]); x.classList.remove("small"); a.appendChild(x);
+      });
+      amt.addEventListener("keydown", function (e) { if (e.key === "Enter") { var n = +amt.value; if (n > 0) { damage(p, n); amt.value = ""; } } });
+      adj.appendChild(a);
+      var full = document.createElement("div"); full.className = "lpmore";
+      full.appendChild(btn("Full HP", function () { setHp(p, hpOf(p).max, 0); }));
+      adj.appendChild(full);
+      c.appendChild(adj);
       root.appendChild(c);
     });
     paintBattle();
@@ -882,7 +932,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     S.party.forEach(function (p) {
       var c = document.querySelector('.lpc[data-pid="' + p.id + '"]'); if (!c) return;
       var h = hpOf(p), src = c.querySelector(".src"), pct = Math.min(100, h.current / h.max * 100);
-      src.className = "src" + (h.src === "manual" ? " man" : "");
+      src.className = "src" + (h.src === "manual" ? " man" : ""); c.classList.toggle("man", h.src === "manual");
       src.textContent = h.src === "manual" ? "Manual HP (sheet ignored)" : h.src === "ddb" ? "From D&D Beyond" : h.src === "none" ? (ddbOf(p) ? "Waiting for D&D Beyond…" : "No sheet · manual only") : "D&D Beyond: " + h.src.slice(4);
       c.querySelector(".cur").textContent = h.current; c.querySelector(".max").textContent = h.max;
       c.querySelector(".tmp").textContent = h.temp ? "+" + h.temp + " temp" : "";
@@ -955,12 +1005,13 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var pend = ready && (!live || talkPick.a !== live.a || talkPick.b !== live.b);
     $("talk-apply").disabled = !pend;
     $("talk-live").disabled = !(ready || (live && live.a && live.b));
+    var mini = $("talk-mini"); if (mini) mini.textContent = live ? nameOf(live.a) + " & " + nameOf(live.b) : "";
     st.innerHTML = (live ? "Conversation screen: <b>" + esc(nameOf(live.a)) + "</b> &amp; <b>" + esc(nameOf(live.b)) + "</b>" : "Conversation screen not set up yet.") +
       (talkPick && !ready ? '<br><span class="pend">Tap one more character.</span>' : pend ? '<br><span class="pend">Not set up yet: press 1, or 2 to set up and go live at once.</span>' : "");
     // thumbnail: what the conversation screen will look like (the pick if there is one, otherwise what's set up now)
     var show = ready ? talkPick : live;
     var h = $("tpv-label").parentNode, sc = $("tscreen");
-    h.classList.toggle("pending", !!pend); h.classList.toggle("live", !pend && !!live); sc.classList.toggle("pending", !!pend); sc.classList.toggle("live", !pend && !!live);
+    h.classList.toggle("pending", !!pend); h.classList.toggle("isset", !pend && !!live); sc.classList.toggle("pending", !!pend); sc.classList.toggle("isset", !pend && !!live);
     $("tpv-label").textContent = pend ? "Preview · not set up yet" : live ? "Preview · this is set up" : "Preview";
     tpvSend(show);
   }
@@ -996,6 +1047,65 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   $("talk-back").addEventListener("click", function () {
     sendState({ golive: { scene: "main" } }).then(function (j) { if (j) status("Going back: OBS switches to the main party scene in a few seconds.", "good"); });
   });
+
+  /* ---------- LIVE: collapsible panels (remembered on this computer) ---------- */
+  var FOLDS = {}; try { FOLDS = JSON.parse(LS.get("reditus-live-folds") || "{}") || {}; } catch (e) { FOLDS = {}; }
+  function setFold(panel, open, remember) {
+    var k = panel.getAttribute("data-fold");
+    panel.classList.toggle("closed", !open); panel.querySelector(".phead").setAttribute("aria-expanded", String(open));
+    if (remember !== false) { FOLDS[k] = open ? 1 : 0; LS.set("reditus-live-folds", JSON.stringify(FOLDS)); }
+    if (k === "talk") syncThumb();
+    if (k === "yt") paintYt();
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".panel.fold"), function (pn) {
+    var k = pn.getAttribute("data-fold");
+    if (FOLDS[k] === 0) { pn.classList.add("closed"); pn.querySelector(".phead").setAttribute("aria-expanded", "false"); }
+    pn.querySelector(".phead").addEventListener("click", function () { setFold(pn, pn.classList.contains("closed")); if (k === "yt") YT.userSet = YT.videoId || "off"; });
+  });
+  // conversation thumbnail: its own fold; the preview only runs while it's showing
+  var THUMB_OPEN = FOLDS.thumb !== 0;
+  function syncThumb() {
+    var talkOpen = !$("talk-panel").classList.contains("closed"), on = THUMB_OPEN && talkOpen;
+    $("tscreen").classList.toggle("shut", !THUMB_OPEN); $("tpv-toggle").setAttribute("aria-expanded", String(THUMB_OPEN));
+    if (on && MODE === "live") { tpvLoad(); tfit(); }
+    else if (tpvLoaded && !on) { tpv.src = "about:blank"; tpvu.src = "about:blank"; tpvLoaded = false; tpvShown = ""; }
+  }
+  $("tpv-toggle").addEventListener("click", function () { THUMB_OPEN = !THUMB_OPEN; FOLDS.thumb = THUMB_OPEN ? 1 : 0; LS.set("reditus-live-folds", JSON.stringify(FOLDS)); syncThumb(); });
+
+  /* ---------- LIVE: YouTube preview (the relay checks whether the channel is live) ---------- */
+  var YT = { live: false, videoId: "", checked: 0, err: "", userSet: null, shown: "" };
+  function ytChannel() { var y = (S && S.youtube) || {}; return (y.channel || "UCluuU9GKY067Vo0hfTTAndA").trim(); }
+  function ytPoll() {
+    var u = relayUrl(); if (!u || !S) return;
+    if (S.youtube && S.youtube.preview === false) { YT.live = false; YT.err = "off"; paintYt(); return; }
+    fetch(u + "/yt?channel=" + encodeURIComponent(ytChannel()) + "&t=" + Math.floor(Date.now() / 30000)).then(function (r) { return r.json(); }).then(function (j) {
+      var was = YT.live;
+      YT.live = !!j.live; YT.videoId = j.videoId || ""; YT.upcoming = !!j.upcoming; YT.err = j.error || ""; YT.checked = Date.now();
+      // went live: open the preview by itself (unless it was closed by hand during this same stream)
+      if (YT.live && !was && YT.userSet !== YT.videoId) setFold($("yt-panel"), true, false);
+      paintYt();
+    }).catch(function () { YT.err = "Can't reach the relay"; paintYt(); });
+  }
+  function paintYt() {
+    var st = $("yt-state"), box = $("yt-box"), open = !$("yt-panel").classList.contains("closed");
+    st.className = "ytstate" + (YT.live ? " onair" : "");
+    st.textContent = YT.live ? "LIVE" : YT.err === "off" ? "Off" : YT.checked ? (YT.upcoming ? "Scheduled" : "Offline") : "Checking…";
+    var want = YT.live && open ? YT.videoId : "";
+    var msg = YT.err === "off" ? "Turned off in Setup → Show & GM." : YT.err ? "Couldn't check YouTube (" + YT.err + ")." : YT.upcoming ? "A stream is scheduled but hasn't started. The preview appears when it goes live." : YT.checked ? "Not live right now. The preview pops up by itself when the stream starts." : "Checking if the channel is live…";
+    var key = want ? "v:" + want : "m:" + msg;
+    if (key === YT.shown) return;
+    YT.shown = key; box.innerHTML = "";
+    if (want) {
+      var f = document.createElement("iframe"); f.title = "YouTube live preview (muted)";
+      f.allow = "autoplay; encrypted-media; picture-in-picture"; f.referrerPolicy = "strict-origin-when-cross-origin";
+      f.src = "https://www.youtube.com/embed/" + want + "?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1";
+      box.appendChild(f);
+    } else {
+      var m = document.createElement("div"); m.className = "ytmsg"; m.textContent = msg;
+      box.appendChild(m);
+    }
+  }
+  setInterval(ytPoll, 60000);
 
   /* ---------- LIVE: OBS scenes (through the OBS link page running inside OBS) ---------- */
   var OBS = { armed: null, armTimer: null, going: null, goingAt: 0, sig: "" };
@@ -1058,7 +1168,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     ["live", "setup", "help"].forEach(function (x) { $("mode-" + x).hidden = x !== m; $("m-" + x).setAttribute("aria-selected", x === m ? "true" : "false"); });
     if (m === "setup" && !pv.src) reloadPreview();
     if (m === "setup") fit();
-    if (m === "live") { tpvLoad(); tfit(); }
+    if (m === "live") syncThumb();
   }
   ["live", "setup", "help"].forEach(function (x) { $("m-" + x).addEventListener("click", function () { setMode(x); }); });
 
@@ -1085,6 +1195,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function renderAll() {
     if (!S) return;
     renderParty(); renderTicker(); renderShow(); renderBreak(); renderBattle(); renderTalk();
+    if (!YT.checked && !YT.started) { YT.started = true; ytPoll(); }
     var f = $("pv-focus"), cur = f.value;
     f.innerHTML = S.party.filter(function (p) { return p.seat !== false; }).map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; }).join("");
     if (cur) f.value = cur;

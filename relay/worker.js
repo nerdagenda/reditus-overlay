@@ -93,6 +93,27 @@ export default {
       return json(sheetInfo(j && j.data ? j.data : j, id[1]));
     }
 
+    // is a YouTube channel live right now? GET /yt?channel=UC…  → { live, videoId, upcoming }  (checked at most once a minute)
+    if (url.pathname === "/yt") {
+      const ch = url.searchParams.get("channel") || "";
+      const path = /^UC[\w-]{22}$/.test(ch) ? "channel/" + ch : /^@[\w.-]{3,40}$/.test(ch) ? ch : "";
+      if (!path) return json({ error: "channel should be a UC… channel id or an @handle" }, 400);
+      const key = new Request("https://reditus-yt-cache/" + path);
+      const hit = await caches.default.match(key);
+      if (hit) return new Response(hit.body, { headers });
+      let out = { live: false, videoId: "", upcoming: false, t: Date.now() };
+      try {
+        const r = await fetch("https://www.youtube.com/" + path + "/live", { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36", "Accept-Language": "en-US,en;q=0.9", Cookie: "SOCS=CAI; CONSENT=YES+1" } });
+        const h = await r.text();
+        const vid = (h.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/watch\?v=([\w-]{11})"/) || [])[1] || "";
+        const live = !!vid && (/"isLiveNow":true/.test(h) || /"isLive":true/.test(h));
+        out = { live, videoId: vid, upcoming: !!vid && !live && /"isUpcoming":true/.test(h), t: Date.now() };
+      } catch (e) { out.error = String(e && e.message || e); }
+      const res = JSON.stringify(out);
+      ctx.waitUntil(caches.default.put(key, new Response(res, { headers: { "Content-Type": "application/json", "Cache-Control": "max-age=" + (out.live ? 120 : 50) } })));
+      return new Response(res, { headers });
+    }
+
     if (url.pathname !== "/hp") return json({ ok: true, service: "reditus-hp-relay", kv: !!env.HP, key: !!env.ADMIN_KEY });
 
     const debug = url.searchParams.get("debug") === "1";
