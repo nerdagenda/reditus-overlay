@@ -179,8 +179,8 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       .then(function (j) { SHA = j.sha; return b64decode(j.content); }) : Promise.reject(new Error("no key"));
     viaApi.catch(function () { return fetch("data.js?t=" + Date.now()).then(function (r) { return r.text(); }); })
       .then(function (text) {
-        S = parseDataJs(text); ORIG = JSON.stringify(S);
-        renderAll(); dirty(); pushPreview(true); relayPoll();
+        S = parseDataJs(text);
+        renderAll(); ORIG = JSON.stringify(S); dirty(); pushPreview(true); relayPoll();
         status(token ? "Loaded the latest saved version." : "Loaded. Add your GitHub key to publish.", token ? "good" : "warn");
       })
       .catch(function (e) { status("Couldn't load data.js: " + e.message, "bad"); });
