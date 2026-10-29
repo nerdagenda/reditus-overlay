@@ -287,7 +287,7 @@
         var pr = vv.play && vv.play(); if (pr && pr.catch) pr.catch(function () {});
       } else {
         var src = (s.who && (s.who.art || s.who.portrait)) || "";
-        var a = el("div", "art", f); place(a, t, t, s.w, s.h); a.style.backgroundImage = "url('" + src + "')";
+        var a = el("div", "art still", f); place(a, t, t, s.w, s.h); a.style.backgroundImage = "url('" + src + "')";
       }
     }
     var v = el("div", "vig", f); place(v, t, t, s.w, s.h);
@@ -765,8 +765,8 @@
         if (src) {
           n = document.createElement("video"); n.muted = true; n.loop = true; n.autoplay = true; n.playsInline = true;
           n.setAttribute("muted", ""); n.setAttribute("playsinline", ""); n.preload = "auto"; n.src = src; if (still) n.poster = still;
-        } else { n = document.createElement("div"); n.style.backgroundImage = "url('" + still + "')"; n.style.backgroundSize = "cover"; n.style.backgroundPosition = "center 30%"; }
-        n.className = "under-slot"; UVIDS[key] = n;
+        } else { n = document.createElement("div"); n.style.backgroundImage = "url('" + still + "')"; n.style.backgroundSize = "cover"; n.style.backgroundPosition = "center 30%"; n._still = 1; }
+        n.className = "under-slot" + (n._still ? " still" : ""); UVIDS[key] = n;
       }
       root.appendChild(n);
       // bleed 6px past the window so no gap shows at the frame edge

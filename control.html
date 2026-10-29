@@ -29,6 +29,10 @@ button, select, input, textarea { font: inherit; color: var(--text); }
 .btn.primary { background: linear-gradient(180deg, #f3cf8f, #c4894c); color: #1c1205; border-color: #f3cf8f; font-weight: 600; }
 .btn.primary:disabled { opacity: .45; cursor: default; }
 .btn.small { padding: 4px 9px; font-size: 12px; }
+.sheetrow { display: flex; gap: 6px; align-items: stretch; }
+.sheetrow input { flex: 1; min-width: 0; }
+.sheetbtn { display: inline-flex; align-items: center; white-space: nowrap; text-decoration: none; color: var(--gold-hi); text-transform: none; letter-spacing: 0; }
+.sheetbtn[aria-disabled="true"] { opacity: .4; pointer-events: none; }
 .btn.battle[aria-pressed="true"] { background: linear-gradient(180deg, #d4202a, #7a0c14); border-color: #ff8a80; color: #fff; font-weight: 600; box-shadow: 0 0 14px rgba(255, 60, 60, .45); }
 .hprow { display: grid; grid-template-columns: minmax(110px, 1fr) auto; gap: 8px 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
 .hprow:first-of-type { border-top: 0; }
@@ -253,7 +257,32 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       r2.appendChild(field("Portrait image path", p.portrait, function (v) { p.portrait = v; img.src = v; }, { id: "p-" + idx + "-img" }));
       r2.appendChild(field("Off-cam art path (optional)", p.art, function (v) { p.art = v; }, { id: "p-" + idx + "-artimg" }));
       r2.appendChild(field("Off-cam animation (video path)", p.video, function (v) { p.video = v; }, { id: "p-" + idx + "-video" }));
-      r2.appendChild(field("D&D Beyond sheet link (live HP)", p.ddb, function (v) { p.ddb = v.trim(); }, { id: "p-" + idx + "-ddb" }));
+      var dl = field("D&D Beyond sheet link (live HP)", p.ddb, function (v) { p.ddb = v.trim(); setSheet(); }, { id: "p-" + idx + "-ddb" });
+      var sw = document.createElement("div"); sw.className = "sheetrow";
+      var sheetIn = dl.querySelector("input"); dl.replaceChild(sw, sheetIn); sw.appendChild(sheetIn);
+      var sa = document.createElement("a"); sa.className = "btn small sheetbtn"; sa.target = "_blank"; sa.rel = "noopener"; sa.textContent = "Open sheet ↗";
+      sw.appendChild(sa);
+      var ub = btn("Update from sheet", function () {
+        var t = String(p.ddb || "").trim();
+        if (!t) { status("Add a D&D Beyond link first.", "warn"); return; }
+        ub.disabled = true; ub.textContent = "Reading sheet…";
+        fetchSheet(t).then(function (d) {
+          var diff = [];
+          [["level", "Level"], ["race", "Race"], ["cls", "Class"], ["ac", "AC"], ["hp", "Max HP"]].forEach(function (f) { if (d[f[0]] !== "" && d[f[0]] != null && String(p[f[0]]) !== String(d[f[0]])) { diff.push(f[1] + " " + (p[f[0]] == null ? "–" : p[f[0]]) + " → " + d[f[0]]); p[f[0]] = d[f[0]]; } });
+          p.stats = p.stats || {};
+          Object.keys(d.stats || {}).forEach(function (k) { if (p.stats[k] !== d.stats[k]) { diff.push(k.toUpperCase() + " " + (p.stats[k] == null ? "–" : p.stats[k]) + " → " + d.stats[k]); p.stats[k] = d.stats[k]; } });
+          changed(); renderAll();
+          status(diff.length ? (p.name || "Character") + " updated: " + diff.join(", ") + ". Check AC, then Publish." : (p.name || "Character") + " already matches the sheet.", diff.length ? "warn" : "good");
+        }).catch(function (e) { ub.disabled = false; ub.textContent = "Update from sheet"; status(e.message, "bad"); });
+      });
+      ub.classList.add("sheetbtn"); sw.appendChild(ub);
+      function setSheet() {
+        var t = String(p.ddb || "").trim(), m = t.match(/characters\/(\d+)/) || t.match(/^(\d{3,12})$/);
+        if (m) { sa.href = "https://www.dndbeyond.com/characters/" + m[1]; sa.removeAttribute("aria-disabled"); }
+        else { sa.removeAttribute("href"); sa.setAttribute("aria-disabled", "true"); }
+      }
+      setSheet();
+      dl.style.gridColumn = "1 / -1"; r2.appendChild(dl);
       c.appendChild(r2);
       root.appendChild(c);
     });
@@ -262,7 +291,34 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       S.party.push({ id: "char" + Date.now().toString(36), name: "New", fullName: "New Character", seat: true, mode: "cam", ticker: true, level: 1, race: "", cls: "", ac: 10, hp: 10, stats: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 }, portrait: "" });
       changed(); renderAll();
     });
-    add.classList.remove("small"); root.appendChild(add);
+    add.classList.remove("small");
+    var imp = document.createElement("div"); imp.className = "card";
+    imp.innerHTML = "<h3>Add a character from D&amp;D Beyond</h3><p class=\"hint\">Paste their sheet link (the sheet must be set to <b>Public</b>). Name, race, class, level, AC, max HP, ability scores and their D&amp;D Beyond portrait fill in automatically. Live HP is linked too. Glance at AC, since it's calculated, then <b>Publish</b>.</p>";
+    var row = document.createElement("div"); row.className = "sheetrow";
+    var li = document.createElement("input"); li.type = "text"; li.id = "imp-link"; li.placeholder = "https://www.dndbeyond.com/characters/123456789";
+    li.setAttribute("aria-label", "D&D Beyond sheet link");
+    row.appendChild(li);
+    var ib = btn("Import character", function () {
+      var t = li.value.trim(); if (!t) { li.focus(); return; }
+      var m = t.match(/characters\/(\d+)/) || t.match(/^(\d{3,12})$/);
+      if (m && S.party.some(function (p) { return String(p.ddb || "").indexOf(m[1]) >= 0; })) { status("That sheet is already linked to a character.", "warn"); return; }
+      ib.disabled = true; ib.textContent = "Reading sheet…";
+      fetchSheet(t).then(function (d) {
+        var first = (d.name || "New").split(/\s+/)[0].replace(/[^\w-]/g, "") || "New";
+        var id = first.toLowerCase(), n = 2; while (S.party.some(function (p) { return p.id === id; })) id = first.toLowerCase() + n++;
+        S.party.push({ id: id, name: first, fullName: d.name || first, seat: true, mode: "cam", ticker: true,
+          level: d.level, race: d.race, cls: d.cls, ac: d.ac, hp: d.hp, stats: d.stats, portrait: d.avatar || "",
+          ddb: "https://www.dndbeyond.com/characters/" + d.id });
+        changed(); renderAll();
+        status("Imported " + (d.name || first) + " (level " + d.level + " " + d.race + " " + d.cls + ", AC " + d.ac + ", " + d.hp + " HP). Check it over, then Publish.", "good");
+        setTimeout(function () { var cards = document.querySelectorAll("#s-party .card"); var c = cards[S.party.length - 1]; if (c) c.scrollIntoView({ behavior: "smooth", block: "center" }); }, 50);
+      }).catch(function (e) { ib.disabled = false; ib.textContent = "Import character"; status(e.message, "bad"); });
+    }, "primary");
+    ib.classList.remove("small"); row.appendChild(ib);
+    imp.appendChild(row);
+    var or = document.createElement("p"); or.className = "hint"; or.style.marginTop = "10px"; or.textContent = "No D&D Beyond sheet? Add one by hand:";
+    imp.appendChild(or); imp.appendChild(add);
+    root.appendChild(imp);
   }
 
   /* ---------- Scrolling bar ---------- */
@@ -359,6 +415,17 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   /* ---------- Battle / HP (talks to the relay directly: changes show on stream within seconds, no Publish needed) ---------- */
   var hpKey = LS.get("reditus-hp-key") || "";
   var LIVE = { chars: {}, manual: {}, battle: null, mapBars: true }, hpPending = {}, hpSendTimer = null, hpErr = "";
+  function fetchSheet(link) {
+    var u = relayUrl(), m = String(link).match(/characters\/(\d+)/) || String(link).match(/^\s*(\d{3,12})\s*$/);
+    if (!u) return Promise.reject(new Error("Add the HP relay address first (Show & GM tab)."));
+    if (!m) return Promise.reject(new Error("That doesn't look like a D&D Beyond character link."));
+    return fetch(u + "/sheet?id=" + m[1] + "&t=" + Date.now()).then(function (r) {
+      return r.json().then(function (j) {
+        if (!r.ok || j.error) throw new Error(j.error === "private" ? "That sheet is private. Set it to Public in D&D Beyond (Manage → Character Settings)." : j.error === "no character id" || r.status === 404 ? "Couldn't find that character." : "D&D Beyond said: " + (j.error || r.status));
+        return j;
+      });
+    });
+  }
   function relayUrl() { return S && S.hpRelay && S.hpRelay.url ? S.hpRelay.url.replace(/\/+$/, "") : ""; }
   function ddbOf(p) { var t = String(p.ddb || ""), m = t.match(/characters\/(\d+)/) || t.match(/^\s*(\d{3,12})\s*$/); return m ? m[1] : ""; }
   function hpOf(p) {

@@ -49,6 +49,18 @@ export default {
       return json({ ok: true, state: st });
     }
 
+    if (url.pathname === "/sheet") {
+      const id = (url.searchParams.get("id") || "").match(/(\d{3,12})/);
+      if (!id) return json({ error: "no character id" }, 400);
+      const up = await fetch("https://character-service.dndbeyond.com/character/v5/character/" + id[1], {
+        headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 (compatible; ReditusOverlayHP/1.0)" },
+      });
+      if (up.status === 403 || up.status === 401) return json({ error: "private", hint: "Set this D&D Beyond sheet's privacy to Public" }, 403);
+      if (!up.ok) return json({ error: "ddb " + up.status }, 502);
+      const j = await up.json();
+      return json(sheetInfo(j && j.data ? j.data : j, id[1]));
+    }
+
     if (url.pathname !== "/hp") return json({ ok: true, service: "reditus-hp-relay", kv: !!env.HP, key: !!env.ADMIN_KEY });
 
     const debug = url.searchParams.get("debug") === "1";
@@ -129,4 +141,54 @@ function summarise(c, debug) {
   };
   if (debug) out.raw = { baseHitPoints: c.baseHitPoints, bonusHitPoints: c.bonusHitPoints, overrideHitPoints: c.overrideHitPoints, removedHitPoints: removed, temporaryHitPoints: temp, con, conMod, perLevel };
   return out;
+}
+
+/* Whole-sheet summary for the control panel's "Import from D&D Beyond" button.
+   AC is a best-effort calculation (armour + DEX + shield + item/feat bonuses), so it's worth a glance against the sheet. */
+function sheetInfo(c, id) {
+  const STAT = ["str", "dex", "con", "int", "wis", "cha"], NAMES = ["strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma"];
+  const inv = c.inventory || [];
+  const active = new Set(inv.filter((i) => i.equipped && i.definition && (!i.definition.canAttune || i.isAttuned)).map((i) => i.definition.id));
+  const mm = c.modifiers || {};
+  const mods = [].concat(mm.race || [], mm.class || [], mm.background || [], mm.feat || [], mm.condition || [],
+    (mm.item || []).filter((m) => active.has(m.componentId)));
+  const pick = (arr, sid) => ((arr || []).find((s) => s.id === sid) || {}).value;
+  const stats = {};
+  STAT.forEach((k, i) => {
+    const sid = i + 1, o = pick(c.overrideStats, sid);
+    let v = o != null ? o : (pick(c.stats, sid) || 10) + (pick(c.bonusStats, sid) || 0);
+    if (o == null) {
+      mods.forEach((m) => { if (m.type === "bonus" && m.subType === NAMES[i] + "-score") v += m.value || 0; });
+      mods.forEach((m) => { if (m.type === "set" && m.subType === NAMES[i] + "-score") v = Math.max(v, m.value || 0); });
+    }
+    stats[k] = v;
+  });
+  const mod = (k) => Math.floor((stats[k] - 10) / 2);
+  const level = (c.classes || []).reduce((a, k) => a + (k.level || 0), 0) || 1;
+  const worn = inv.filter((i) => i.equipped && i.definition && i.definition.armorTypeId);
+  const body = worn.filter((i) => i.definition.armorTypeId !== 4).sort((a, b) => (b.definition.armorClass || 0) - (a.definition.armorClass || 0))[0];
+  const shield = worn.find((i) => i.definition.armorTypeId === 4);
+  let ac;
+  if (body) {
+    const t = body.definition.armorTypeId, d = mod("dex");
+    ac = body.definition.armorClass + (t === 1 ? d : t === 2 ? Math.min(d, 2) : 0);
+  } else {
+    ac = 10 + mod("dex");
+    mods.forEach((m) => { if (m.type === "set" && m.subType === "unarmored-armor-class" && m.statId) ac += mod(STAT[m.statId - 1]); });
+  }
+  if (shield) ac += shield.definition.armorClass || 2;
+  mods.forEach((m) => {
+    if (m.type !== "bonus") return;
+    if (m.subType === "armor-class" || m.subType === "dual-wield-armor-class") ac += m.value || 0;
+    if (m.subType === "armored-armor-class" && body) ac += m.value || 0;
+    if (m.subType === "unarmored-armor-class" && !body) ac += m.value || 0;
+  });
+  let perLevel = 0;
+  mods.forEach((m) => { if (m.subType === "hit-points-per-level" && m.type === "bonus") perLevel += m.value || 0; });
+  const hp = c.overrideHitPoints != null ? c.overrideHitPoints : (c.baseHitPoints || 0) + (c.bonusHitPoints || 0) + (mod("con") + perLevel) * level;
+  const cls = (c.classes || []).slice().sort((a, b) => (b.level || 0) - (a.level || 0)).map((k) => k.definition && k.definition.name).filter(Boolean).join(" / ");
+  return {
+    id, name: c.name || "", race: (c.race && (c.race.fullName || c.race.baseName)) || "", cls, level, ac, hp, stats,
+    avatar: (c.decorations && c.decorations.avatarUrl) || "",
+  };
 }

@@ -297,3 +297,9 @@ body { width: 100vw; height: 100vh; }
 .hppop.dmg { color: #ff5a4f; } .hppop.heal { color: #7fe39a; }
 @keyframes hppop { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.6); } 15% { opacity: 1; transform: translate(-50%, -6px) scale(1.15); }
   30% { transform: translate(-50%, -10px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -46px); } }
+
+/* still image standing in for a loop video (e.g. a D&D Beyond portrait): slow drift so it doesn't look frozen */
+.under-slot.still { animation: stilldrift 26s ease-in-out infinite alternate; }
+@keyframes stilldrift { 0% { transform: scale(1.02); background-position: 50% 28%; } 100% { transform: scale(1.09); background-position: 50% 34%; } }
+.frame .art.still { animation: stillpan 26s ease-in-out infinite alternate; }
+@keyframes stillpan { 0% { background-position: 50% 24%; } 100% { background-position: 50% 38%; } }
