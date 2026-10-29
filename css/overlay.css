@@ -268,3 +268,32 @@ body { width: 100vw; height: 100vh; }
 
 /* bottom OBS layer */
 .under-slot { position: absolute; object-fit: cover; object-position: center 30%; background: #050c22; }
+
+/* ---------- live HP bars (D&D Beyond relay) ---------- */
+.hpbar { position: absolute; z-index: 4; transition: opacity .6s; }
+.hpbar.nodata { opacity: 0; }
+.hpbar .trk { position: absolute; inset: 0; border-radius: 3px; overflow: hidden;
+  background: linear-gradient(180deg, #120408, #2a0a10); box-shadow: 0 0 0 1.5px #c9a063, 0 0 0 3px rgba(5, 8, 20, .85), 0 3px 10px rgba(0, 0, 0, .6); }
+.hpbar .trk i { position: absolute; top: 0; bottom: 0; left: 0; }
+.hpbar .lag { background: #f5d7a0; transition: width 1.1s cubic-bezier(.5, 0, .3, 1) .45s; }
+.hpbar .fill { background: linear-gradient(180deg, #ff6b5e 0%, #d4202a 45%, #8e0e17 100%); transition: width .35s ease-out;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
+.hpbar .tmp { background: linear-gradient(180deg, #9fe6ff, #3a9cd8 60%, #1d5a8a); transition: left .35s, width .35s; }
+.hpbar .num { position: absolute; right: 0; bottom: calc(100% + 3px); font-family: var(--display); font-size: 15px; line-height: 1; color: #fff;
+  letter-spacing: .03em; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, .9); white-space: nowrap; }
+.hpbar.big .num { font-size: 19px; }
+.hpbar.low .fill { animation: hplow 1.1s ease-in-out infinite; }
+@keyframes hplow { 50% { filter: brightness(1.6) saturate(1.3); } }
+.hpbar.down .trk { box-shadow: 0 0 0 1.5px #777, 0 0 0 3px rgba(5, 8, 20, .85); }
+.hpbar.down .num { color: #bbb; }
+.hpbar.down .num::before { content: "DOWN  "; color: #ff6b5e; }
+.hpbar .ds { position: absolute; left: 0; bottom: calc(100% + 3px); font-size: 12px; letter-spacing: 1px; text-shadow: 0 1px 2px #000; }
+.hpbar .ds .s { color: #8fe08f; margin-right: 6px; } .hpbar .ds .f { color: #ff6b5e; }
+.hpbar.hit { animation: hphit .45s ease-out; }
+@keyframes hphit { 15% { transform: translateX(-4px); } 35% { transform: translateX(4px); } 55% { transform: translateX(-2px); } 75% { transform: translateX(1px); } }
+.hppop { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); font-family: var(--display); font-size: 30px; line-height: 1;
+  text-shadow: 0 2px 3px #000, 0 0 10px rgba(0, 0, 0, .8); animation: hppop 1.8s ease-out forwards; pointer-events: none; }
+.hpbar.big .hppop { font-size: 40px; }
+.hppop.dmg { color: #ff5a4f; } .hppop.heal { color: #7fe39a; }
+@keyframes hppop { 0% { opacity: 0; transform: translate(-50%, 10px) scale(.6); } 15% { opacity: 1; transform: translate(-50%, -6px) scale(1.15); }
+  30% { transform: translate(-50%, -10px) scale(1); } 100% { opacity: 0; transform: translate(-50%, -46px); } }
