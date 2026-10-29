@@ -1,6 +1,6 @@
 /* ==========================================================================
    THE REDITUS CAMPAIGN — LIVE OVERLAY DATA
-   Saved from the control panel (control.html) on 10/28/2026, 10:16:46 PM.
+   Saved from the control panel (control.html) on 10/28/2026, 10:17:15 PM.
    You can still edit this by hand; the control panel will read it back.
    Bump `build` only when the overlay CODE changes (forces a full reload).
    ========================================================================== */
@@ -196,7 +196,9 @@ window.REDITUS = {
     "images": []
   },
   "scenes": {
-    "main": {},
+    "main": {
+      "gmShift": 0.35
+    },
     "spotlight": {},
     "map": {},
     "gm": {},
