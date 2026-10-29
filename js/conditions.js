@@ -253,13 +253,17 @@
     var runes = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ", fs = 27 * SC, gap = 44 * SC;
     if (alone) f.classList.add("cf-concentrating");
     var box = el("div", "crunes", z), per = 2 * (w + h), n = Math.round(per / gap), inset = fs * .75;
+    // the runes ride a loop just inside the frame and drift slowly clockwise while they blink in and out
+    var path = "M" + inset + "," + inset + " H" + (w - inset) + " V" + (h - inset) + " H" + inset + " Z", LAP = 160;
     for (var i = 0; i < n; i++) {
-      var d = i / n * per, x, y;
-      if (d < w) { x = d; y = inset; } else if (d < w + h) { x = w - inset; y = d - w; } else if (d < 2 * w + h) { x = w - (d - w - h); y = h - inset; } else { x = inset; y = h - (d - 2 * w - h); }
       var r = el("i", "", box); r.textContent = runes.charAt(Math.floor(Math.random() * runes.length));
-      r.style.left = x + "px"; r.style.top = y + "px"; r.style.fontSize = fs + "px";
-      r.style.animationDuration = rnd(9, 14) + "s"; r.style.animationDelay = rnd(-14, 0) + "s";
+      r.style.fontSize = fs + "px"; r.style.offsetPath = "path('" + path + "')";
+      var blink = rnd(9, 14);
+      r.style.animationDuration = blink + "s, " + LAP + "s";
+      r.style.animationDelay = rnd(-14, 0) + "s, " + (-(i / n) * LAP) + "s";
     }
+    // blue glow sweeping round the frame the other way
+    var ring = el("div", "cconcring", z); ring.style.setProperty("--rw", Math.max(4, 10 * G) + "px");
   }
 
   /* apply to one camera frame. f = .frame element, s = slot {w,h,size}, t = border px */

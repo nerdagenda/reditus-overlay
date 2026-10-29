@@ -190,9 +190,23 @@
 
 /* CONCENTRATING — faint runes fading in and out all round the frame; blue frame glow when it's the only effect */
 .crunes { position: absolute; inset: 0; }
-.crunes i { position: absolute; transform: translate(-50%, -50%); color: #cfe6ff; font-style: normal; line-height: 1; opacity: 0;
-  text-shadow: 0 0 6px #6fb0ff, 0 0 14px #3a7dff; animation: crune ease-in-out infinite; }
-@keyframes crune { 0% { opacity: 0; } 14% { opacity: .9; } 72% { opacity: .9; } 86%, 100% { opacity: 0; } }
+.crunes i { position: absolute; left: 0; top: 0; color: #e2f0ff; font-style: normal; line-height: 1; opacity: 0;
+  offset-rotate: 0deg; offset-anchor: 50% 50%;
+  text-shadow: 0 0 6px #8cc4ff, 0 0 14px #4a8dff, 0 0 22px rgba(58, 125, 255, .55);
+  animation-name: crune, crunelap; animation-timing-function: ease-in-out, linear; animation-iteration-count: infinite, infinite; }
+@keyframes crune { 0% { opacity: 0; } 14% { opacity: 1; } 72% { opacity: 1; } 86%, 100% { opacity: 0; } }
+@keyframes crunelap { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+/* the counter-rotating blue glow: a soft ring of light that sweeps round the frame anticlockwise */
+@property --cca { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.cconcring { position: absolute; inset: 0; padding: var(--rw); pointer-events: none; mix-blend-mode: screen;
+  background: conic-gradient(from var(--cca), rgba(90, 160, 255, 0) 0deg, rgba(160, 210, 255, .9) 30deg, rgba(90, 160, 255, .35) 60deg, rgba(90, 160, 255, 0) 100deg,
+    rgba(90, 160, 255, 0) 180deg, rgba(160, 210, 255, .9) 210deg, rgba(90, 160, 255, .35) 240deg, rgba(90, 160, 255, 0) 280deg);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  filter: blur(calc(var(--rw) * .45)) drop-shadow(0 0 8px rgba(90, 160, 255, .8));
+  animation: cconcspin 14s linear infinite, cconcin 1.2s ease-out both; }
+@keyframes cconcspin { from { --cca: 360deg; } to { --cca: 0deg; } }
+@keyframes cconcin { from { opacity: 0; } }
 .frame.cf-concentrating .edge, .frame.cf-concentrating .corner { filter: sepia(1) hue-rotate(180deg) saturate(2.4) brightness(1.15) drop-shadow(0 0 7px #5aa0ff); animation: cconcglow 3s ease-in-out infinite; }
 @keyframes cconcglow { 50% { filter: sepia(1) hue-rotate(180deg) saturate(2.4) brightness(1.3) drop-shadow(0 0 14px #5aa0ff); } }
 
