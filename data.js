@@ -38,8 +38,8 @@ window.REDITUS = {
         "cha": 11
       },
       "portrait": "assets/portraits/trey.jpg",
-      "video": "assets/idle/trey.mp4?v=31",
-      "art": "assets/idle/trey.jpg?v=31"
+      "video": "assets/idle/trey.mp4?v=15",
+      "art": "assets/idle/trey.jpg?v=15"
     },
     {
       "id": "darius",
@@ -62,8 +62,8 @@ window.REDITUS = {
         "cha": 19
       },
       "portrait": "assets/portraits/darius.jpg",
-      "video": "assets/idle/darius.mp4?v=30",
-      "art": "assets/idle/darius.jpg?v=30"
+      "video": "assets/idle/darius.mp4?v=15",
+      "art": "assets/idle/darius.jpg?v=15"
     },
     {
       "id": "lapadis",
@@ -86,8 +86,8 @@ window.REDITUS = {
         "cha": 12
       },
       "portrait": "assets/portraits/lapadis.jpg",
-      "video": "assets/idle/lapadis.mp4?v=30",
-      "art": "assets/idle/lapadis.jpg?v=30"
+      "video": "assets/idle/lapadis.mp4?v=15",
+      "art": "assets/idle/lapadis.jpg?v=15"
     },
     {
       "id": "felix",
@@ -110,8 +110,8 @@ window.REDITUS = {
         "cha": 8
       },
       "portrait": "assets/portraits/felix.jpg",
-      "video": "assets/idle/felix.mp4?v=30",
-      "art": "assets/idle/felix.jpg?v=30"
+      "video": "assets/idle/felix.mp4?v=15",
+      "art": "assets/idle/felix.jpg?v=15"
     },
     {
       "id": "jak",
@@ -134,8 +134,8 @@ window.REDITUS = {
         "cha": 14
       },
       "portrait": "assets/portraits/jak.jpg",
-      "video": "assets/idle/jak.mp4?v=30",
-      "art": "assets/idle/jak.jpg?v=30"
+      "video": "assets/idle/jak.mp4?v=15",
+      "art": "assets/idle/jak.jpg?v=15"
     },
     {
       "id": "verris",
@@ -158,8 +158,32 @@ window.REDITUS = {
         "cha": 8
       },
       "portrait": "assets/portraits/verris.jpg",
-      "video": "assets/idle/verris.mp4?v=30",
-      "art": "assets/idle/verris.jpg?v=30"
+      "video": "assets/idle/verris.mp4?v=15",
+      "art": "assets/idle/verris.jpg?v=15"
+    },
+    {
+      "id": "atlas",
+      "name": "A.T.L.A.S",
+      "fullName": "A.T.L.A.S",
+      "seat": false,
+      "mode": "cam",
+      "ticker": false,
+      "level": 8,
+      "race": "Arcane Restorer",
+      "cls": "Cleric",
+      "ac": 19,
+      "hp": 67,
+      "stats": {
+        "str": 15,
+        "dex": 10,
+        "con": 16,
+        "int": 14,
+        "wis": 19,
+        "cha": 8
+      },
+      "portrait": "assets/portraits/atlas.jpg",
+      "video": "assets/idle/atlas.mp4?v=15",
+      "art": "assets/idle/atlas.jpg?v=15"
     }
   ],
   "ticker": {
