@@ -342,7 +342,7 @@
   var HPBARS = [];   // bars on screen right now
   var HPSIG = "";
   function ddbId(p) { var t = String((p && p.ddb) || ""), m = t.match(/characters\/(\d+)/) || t.match(/^\s*(\d{3,12})\s*$/); return m ? m[1] : ""; }
-  var GOLIVE_SEEN = null;
+  var GOLIVE_SEEN = null, FEAT = {};
   var TALK = null, TALKLOCK = false; // conversation pair from the relay (control panel → Apply); TALKLOCK = preview showing an unapplied pick
   function talkPair() {
     var t = TALK || (D.scenes && D.scenes.talk) || {}, ids = [t.a, t.b];
@@ -371,6 +371,8 @@
     var dd = HP[ddbId(p)], list = [];
     if (dd && dd.conditions) list = list.concat(dd.conditions);
     if (CONDS[p.id]) list = list.concat(CONDS[p.id]);
+    var f = FEAT[p.id];   // the one the DM chose to show when there are several
+    if (f) list = list.map(function (x) { var o = typeof x === "string" ? { id: x } : x; return o && o.id === f ? Object.assign({}, o, { show: true }) : x; });
     return list;
   }
   function hpEligible(p) { return !!(p && (MANUAL[p.id] || ddbId(p))); }
@@ -430,7 +432,7 @@
         GOLIVE_SEEN = gl.id;
         if ((j.t || Date.now()) - gl.id < 30000 && window.ReditusOBS && window.ReditusOBS.switchTo) window.ReditusOBS.switchTo(gl.scene, gl.focus);
       }
-      HP = j.chars || {}; MANUAL = j.manual || {}; CONDS = j.conditions || {};
+      HP = j.chars || {}; MANUAL = j.manual || {}; CONDS = j.conditions || {}; FEAT = j.featured || {};
       BATTLE = typeof j.battle === "boolean" ? j.battle : null;
       MAPBARS = typeof j.mapBars === "boolean" ? j.mapBars : null;
       // battle switched or someone gained/lost a bar → rebuild the screen; otherwise just animate the bars

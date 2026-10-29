@@ -60,6 +60,15 @@ export default {
         const sc = String(body.golive.scene || "").toLowerCase();
         if (/^(main|spotlight|talk|map|gm|intro|break)$/.test(sc)) st.golive = { scene: sc, focus: /^[\w-]{1,40}$/.test(body.golive.focus || "") ? body.golive.focus : "", id: Date.now() };
       }
+      // which condition to show when a character has several: { featured: { darius: "stunned" } }  (null = automatic)
+      if (body.featured && typeof body.featured === "object") {
+        st.featured = st.featured || {};
+        Object.keys(body.featured).slice(0, 20).forEach((k) => {
+          const v = body.featured[k];
+          if (!/^[\w-]{1,40}$/.test(k)) return;
+          if (typeof v === "string" && /^[a-z]{2,24}$/.test(v)) st.featured[k] = v; else delete st.featured[k];
+        });
+      }
       // manual conditions set by the DM: { conditions: { felix: ["banished", {id:"exhaustion",level:2}] } }  (null clears)
       if (body.conditions && typeof body.conditions === "object") {
         st.conditions = st.conditions || {};
@@ -128,7 +137,7 @@ export default {
       catch (e) { chars[id] = { error: String(e && e.message || e) }; }
     }));
     const st = await stP, obs = await obsP;
-    return json({ t: Date.now(), obs: obs || null, obscmd: st ? st.obscmd || null : null, battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, talk: st ? st.talk || null : null, golive: st ? st.golive || null : null, manual: st ? st.manual : {}, chars });
+    return json({ t: Date.now(), obs: obs || null, obscmd: st ? st.obscmd || null : null, battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, talk: st ? st.talk || null : null, golive: st ? st.golive || null : null, featured: st ? st.featured || {} : {}, manual: st ? st.manual : {}, chars });
   },
 };
 

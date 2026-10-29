@@ -262,6 +262,12 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .lpconds .none { color: var(--muted); font-size: 15px; }
 .lpconds .cchip { font-size: 15px; padding: 7px 12px 7px 8px; }
 .lpconds .cchip svg { width: 24px; height: 24px; }
+.lpconds .cwrap { display: inline-flex; align-items: stretch; }
+.lpconds .cwrap .cchip { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.lpconds .cshow { font: 600 13px var(--body, Inter, sans-serif); padding: 0 10px; min-height: 40px; color: var(--muted); background: var(--panel-2); border: 1px solid var(--line); border-left: 0; cursor: pointer; white-space: nowrap; }
+.lpconds .cshow:hover { color: #fff; border-color: var(--gold); }
+.lpconds .cshow.on { color: #1c1205; background: var(--gold-hi); border-color: var(--gold-hi); }
+.lpconds .cwrap.shown .cchip { box-shadow: 0 0 0 2px var(--gold-hi); }
 .lpconds .addc { border-style: dashed; color: var(--gold-hi); font-weight: 600; }
 /* condition picker pops over the card below so the grid never jumps */
 .cpick { position: absolute; left: -1px; right: -1px; top: calc(100% - 2px); z-index: 6; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;
@@ -861,6 +867,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     fetch(u + "/hp?ids=" + ids.join(",") + "&t=" + Date.now()).then(function (r) { return r.json(); }).then(function (j) {
       LIVE.chars = j.chars || {}; LIVE.battle = typeof j.battle === "boolean" ? j.battle : null; LIVE.mapBars = j.mapBars !== false;
       LIVE.conditions = Object.assign({}, j.conditions || {}, condPending);
+      if (!FEATPEND) LIVE.featured = j.featured || {};
       LIVE.talk = j.talk && j.talk.a ? j.talk : null; LIVE.seen = Date.now(); paintTalk();
       LIVE.obs = j.obs || null; LIVE.serverT = j.t || 0; paintObs();
       // keep values we're still sending, so the numbers don't jump back while a click is in flight
@@ -914,6 +921,14 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   }
   /* ---------- LIVE: party cards (HP + conditions) ---------- */
   var openPick = {};   // which characters have the condition picker open
+  var FEATPEND = 0;   // a "Show" click still on its way to the relay
+  function setFeatured(p, id) {
+    LIVE.featured = LIVE.featured || {}; var cur = LIVE.featured[p.id], v = cur === id ? null : id;
+    if (v) LIVE.featured[p.id] = v; else delete LIVE.featured[p.id];
+    FEATPEND++; paintBattle();
+    var m = {}; m[p.id] = v;
+    sendState({ featured: m }).then(function () { FEATPEND--; }, function () { FEATPEND--; });
+  }
   var ADJ = {};   // which cards have the manual HP controls open (this session only)
   function renderBattle() {
     var root = $("live-party"); if (!root) return; root.innerHTML = "";
@@ -926,7 +941,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       // conditions up front; manual HP tucked away (HP comes from D&D Beyond almost always)
       var cr = document.createElement("div"); cr.className = "lpconds"; c.appendChild(cr);
       var pk = document.createElement("div"); pk.className = "cpick"; pk.hidden = !openPick[p.id]; pk.setAttribute("role", "group"); pk.setAttribute("aria-label", "Conditions for " + (p.name || ""));
-      if (window.ReditusConditions) window.ReditusConditions.list.forEach(function (cd) {
+      if (window.ReditusConditions) window.ReditusConditions.list.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (cd) {
         var ch = document.createElement("button"); ch.type = "button"; ch.className = "cchip"; ch.setAttribute("data-c", cd.id); ch.style.setProperty("--cc", cd.col);
         ch.innerHTML = window.ReditusConditions.icon(cd.id) + "<span>" + cd.name + "</span>";
         ch.addEventListener("click", function () { toggleCond(p, cd.id); });
@@ -996,6 +1011,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       // active conditions as chips (tap to remove) + the add button
       var mine = manualConds(p), sheet = sheetConds(p), cr = c.querySelector(".lpconds"), pk = c.querySelector(".cpick"), R = window.ReditusConditions || { byId: {}, icon: function () { return ""; } };
       var active = sheet.map(function (x) { return { x: x, sheet: true }; }).concat(mine.filter(function (x) { return !sheet.some(function (y) { return cid(y) === cid(x); }); }).map(function (x) { return { x: x }; }));
+      active.sort(function (a, b) { var A = (R.byId[cid(a.x)] || {}).name || cid(a.x), B = (R.byId[cid(b.x)] || {}).name || cid(b.x); return A.localeCompare(B); });
       cr.innerHTML = "";
       if (!active.length) { var n = document.createElement("span"); n.className = "none"; n.textContent = "No conditions"; cr.appendChild(n); }
       active.forEach(function (a) {
@@ -1004,7 +1020,16 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
         ch.innerHTML = R.icon(id) + "<span>" + esc(cd.name) + (id === "exhaustion" ? " " + (a.x.level || 1) : "") + (a.sheet ? " · sheet" : " ✕") + "</span>";
         ch.title = a.sheet ? "Set on the D&D Beyond sheet. Clear it there." : id === "exhaustion" ? "Tap to raise the level (1–6, then off)" : "Tap to remove";
         ch.addEventListener("click", function () { toggleCond(p, id); });
-        cr.appendChild(ch);
+        if (active.length > 1) {
+          // several at once: pick which one's effect is on the frame (the rest stay as small icons)
+          var feat = (LIVE.featured || {})[p.id], on = feat === id, auto = !feat || !active.some(function (x) { return cid(x.x) === feat; });
+          var wrap = document.createElement("span"); wrap.className = "cwrap" + (on ? " shown" : "");
+          var sh = document.createElement("button"); sh.type = "button"; sh.className = "cshow" + (on ? " on" : "");
+          sh.innerHTML = on ? "👁 Showing" : "👁 Show"; sh.setAttribute("aria-pressed", String(on));
+          sh.title = on ? "This effect is on the frame. Tap to go back to automatic." : "Show this condition's effect on the frame" + (auto ? " (now: automatic)" : "");
+          sh.addEventListener("click", function () { setFeatured(p, id); });
+          wrap.appendChild(ch); wrap.appendChild(sh); cr.appendChild(wrap);
+        } else cr.appendChild(ch);
       });
       var add = document.createElement("button"); add.type = "button"; add.className = "cchip addc"; add.setAttribute("aria-expanded", openPick[p.id] ? "true" : "false");
       add.textContent = openPick[p.id] ? "Done" : "＋ Condition";

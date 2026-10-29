@@ -272,7 +272,12 @@
   // remembers what each window showed last time, so a redraw carries on mid-animation (no replayed entrances),
   // and anything that was switched off gets a proper exit instead of cutting out
   var MEM = {}, EXITS = { restrained: 1300, grappled: 1500, petrified: 1500 };
-  function mainOf(list) { for (var i = 0; i < list.length; i++) if (FX[list[i].id]) return list[i]; return null; }
+  // the condition the DM picked to show ("Show" in the control panel), if any
+  function featured(list) { for (var i = 0; i < list.length; i++) if (list[i].show) return list[i]; return null; }
+  function mainOf(list) {
+    var f = featured(list); if (f) return FX[f.id] ? f : null;
+    for (var i = 0; i < list.length; i++) if (FX[list[i].id]) return list[i]; return null;
+  }
   function sig(list) { return JSON.stringify(list || []); }
 
   // draw a set of conditions into frame-like element F (its effect layer, frame recolour, markers)
@@ -282,10 +287,11 @@
     z.style.left = t + "px"; z.style.top = t + "px"; z.style.width = s.w + "px"; z.style.height = s.h + "px";
     var edge = F.querySelector(":scope > .edge"); F.insertBefore(z, edge);
     if (main) build[main.id](F, z, s.w, s.h, t, main, exiting && EXITS[main.id] ? true : false);
-    if (list.some(function (x) { return x.id === "concentrating"; })) concentrating(F, z, s.w, s.h, !main);
+    var ft = featured(list);
+    if (list.some(function (x) { return x.id === "concentrating"; }) && (!ft || ft.id === "concentrating")) concentrating(F, z, s.w, s.h, !main);
     var mk = null;
     if (!opt.noMarks && list.length) {
-      var lead = main || list[0], rest = list.filter(function (x) { return x !== lead; }), c = BY[lead.id];
+      var lead = ft || main || list[0], rest = list.filter(function (x) { return x !== lead; }), c = BY[lead.id];
       mk = el("div", "cmarks" + (big ? " big" : ""), F); mk.style.left = (t + (big ? 14 : 9)) + "px"; mk.style.top = (t + (big ? 14 : 9)) + "px";
       mk.innerHTML = '<span class="clead c-' + c.id + '" style="--cc:' + c.col + '">' + markerHTML([lead]) + '<b class="clabel">' + c.name + (lead.id === "exhaustion" && lead.level ? " " + lead.level : "") + "</b></span>" +
         (rest.length ? '<span class="crest">' + markerHTML(rest) + "</span>" : "");
