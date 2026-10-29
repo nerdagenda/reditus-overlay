@@ -48,7 +48,7 @@
       turb("cx-phase", "0.015 0.06", "0.015 0.06;0.03 0.035;0.015 0.06", "5s", 2, 10) +
       turb("cx-haze", "0.01 0.18", "0.01 0.18;0.016 0.12;0.01 0.18", "3s", 1, 6) +
       turb("cx-zap", "0.9", "0.7;1.2;0.85;1.05", "0.35s", 1, 7) +
-      turb("cx-fire", "0.035 0.11", "0.035 0.11;0.05 0.16;0.035 0.11", "1.6s", 2, 20) +
+      turb("cx-fire", "0.06 0.2", "0.06 0.2;0.08 0.26;0.06 0.2", "0.9s", 2, 9) +
       turb("cx-smoke", "0.025", "0.025;0.04;0.025", "7s", 3, 34) +
       "</defs></svg>";
     document.body.appendChild(d.firstChild);
@@ -74,6 +74,8 @@
   }
 
   /* ---------- the effects ---------- */
+  // Several effects "pull away and re-apply" on a long cycle (CYCLE seconds) so they keep feeling alive without strobing.
+  var CYCLE = 22;
   var build = {
     banished: function (f, z, w, h) {
       f.classList.add("cf-banished");
@@ -85,6 +87,14 @@
       f.classList.add("cf-poisoned"); el("div", "cedgeglow", z);
       var n = Math.max(6, Math.round(w / 45));
       for (var i = 0; i < n; i++) { var b = el("i", "cbubble", z); var s = rnd(5, 14); b.style.width = b.style.height = s + "px"; b.style.left = rnd(2, 96) + "%"; b.style.animationDuration = rnd(3.5, 7) + "s"; b.style.animationDelay = rnd(-7, 0) + "s"; }
+      // one or two big bubbles now and then, rising and popping
+      var k = Math.min(w, h);
+      for (var j = 0; j < 2; j++) {
+        var B = el("i", "cbigbub", z), S = k * rnd(.16, .22);
+        B.style.width = B.style.height = S + "px"; B.style.left = rnd(15, 75) + "%";
+        B.style.setProperty("--rise", (h * rnd(.45, .7)) + "px");
+        B.style.animationDelay = (j * 6.5 + rnd(0, 2)) + "s";
+      }
     },
     frightened: function (f, z, w, h) {
       f.classList.add("cf-frightened");
@@ -92,55 +102,85 @@
     },
     charmed: function (f, z, w, h) {
       f.classList.add("cf-charmed"); el("div", "cedgeglow", z);
+      var heart = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-8-4.9-8-10.8A4.5 4.5 0 0 1 12 7.4a4.5 4.5 0 0 1 8 2.8C20 16.1 12 21 12 21z"/></svg>';
       for (var i = 0; i < 7; i++) {
-        var hh = el("i", "cheart", z); hh.innerHTML = '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-8-4.9-8-10.8A4.5 4.5 0 0 1 12 7.4a4.5 4.5 0 0 1 8 2.8C20 16.1 12 21 12 21z"/></svg>';
+        var hh = el("i", "cheart", z); hh.innerHTML = heart;
         var s = rnd(12, 24); hh.style.width = hh.style.height = s + "px"; hh.style.left = (i % 2 ? rnd(84, 95) : rnd(2, 12)) + "%";
         hh.style.animationDuration = rnd(4.5, 7.5) + "s"; hh.style.animationDelay = rnd(-7, 0) + "s";
       }
+      // hearts that pop up in the open now and then, then fade
+      var k = Math.min(w, h);
+      for (var j = 0; j < 3; j++) {
+        var P = el("i", "cheartpop", z); P.innerHTML = heart; var S = k * rnd(.13, .2);
+        P.style.width = P.style.height = S + "px"; P.style.left = rnd(12, 80) + "%"; P.style.top = rnd(15, 60) + "%";
+        P.style.animationDelay = (j * 3.2 + rnd(0, 1.5)) + "s";
+      }
     },
-    stunned: function (f, z, w, h, t) { zap(f, w, h, t, "#ffe066"); f.classList.add("cf-stunned");
-      var o = el("div", "corbit", z); for (var i = 0; i < 3; i++) { var s = el("i", "", o); s.innerHTML = '<svg viewBox="0 0 24 24"><path fill="#ffe066" d="M12 2l2.9 6.2 6.8.8-5 4.6 1.3 6.7L12 16.9 6 20.3l1.3-6.7-5-4.6 6.8-.8z"/></svg>'; s.style.transform = "rotate(" + (i * 120) + "deg) translateX(26px)"; } },
+    stunned: function (f, z, w, h, t) {
+      zap(f, w, h, t, "#ffe066"); f.classList.add("cf-stunned");
+      var big = w >= 380, S = big ? 72 : 54, R = big ? 96 : 66;
+      var o = el("div", "corbit", z); o.style.top = (h * .3) + "px";
+      for (var i = 0; i < 3; i++) {
+        var s = el("i", "", o); s.style.width = s.style.height = S + "px"; s.style.left = s.style.top = (-S / 2) + "px";
+        s.innerHTML = '<svg viewBox="0 0 24 24"><path fill="#ffe066" stroke="#7a5a00" stroke-width=".6" d="M12 2l2.9 6.2 6.8.8-5 4.6 1.3 6.7L12 16.9 6 20.3l1.3-6.7-5-4.6 6.8-.8z"/></svg>';
+        s.style.transform = "rotate(" + (i * 120) + "deg) translateX(" + R + "px) scaleY(.55)";
+      }
+    },
     paralyzed: function (f, z, w, h, t) { zap(f, w, h, t, "#9fdcff"); f.classList.add("cf-paralyzed"); el("div", "cedgeglow", z); },
     petrified: function (f, z, w, h) {
       f.classList.add("cf-petrified"); el("div", "cstone", z);
-      var k = Math.min(w, h), p = function (pts) { return '<path d="M' + pts.map(function (q) { return q[0].toFixed(1) + " " + q[1].toFixed(1); }).join(" L") + '"/>'; };
+      var k = Math.min(w, h), p = function (pts, cls) { return '<path pathLength="1" class="' + (cls || "") + '" d="M' + pts.map(function (q) { return q[0].toFixed(1) + " " + q[1].toFixed(1); }).join(" L") + '"/>'; };
       var cr = function (x0, y0, dx, dy) {
-        var s = "", n = 3; for (var i = 0; i < n; i++) {
-          var a = Math.atan2(dy, dx) + rnd(-.55, .55), len = k * rnd(.28, .45), pts = [[x0, y0]], x = x0, y = y0;
-          for (var j = 0; j < 5; j++) { x += Math.cos(a + rnd(-.5, .5)) * len / 5; y += Math.sin(a + rnd(-.5, .5)) * len / 5; pts.push([x, y]); }
-          s += p(pts); var m = pts[2]; s += p([m, [m[0] + rnd(-1, 1) * k * .12, m[1] + rnd(-1, 1) * k * .12]]);
+        var s = ""; for (var i = 0; i < 4; i++) {
+          var a = Math.atan2(dy, dx) + rnd(-.6, .6), len = k * rnd(.42, .7), pts = [[x0, y0]], x = x0, y = y0;
+          for (var j = 0; j < 7; j++) { x += Math.cos(a + rnd(-.45, .45)) * len / 7; y += Math.sin(a + rnd(-.45, .45)) * len / 7; pts.push([x, y]); }
+          s += p(pts, "main");
+          [2, 4].forEach(function (bi) { var m = pts[bi], ba = a + (Math.random() < .5 ? -1 : 1) * rnd(.6, 1.1), bl = k * rnd(.08, .18);
+            s += p([m, [m[0] + Math.cos(ba) * bl * .5, m[1] + Math.sin(ba) * bl * .5], [m[0] + Math.cos(ba + rnd(-.3, .3)) * bl, m[1] + Math.sin(ba + rnd(-.3, .3)) * bl]], "br"); });
         } return s;
       };
       z.insertAdjacentHTML("beforeend", svg(w, h, '<g class="ccrack">' + cr(0, 0, 1, 1) + cr(w, 0, -1, 1) + cr(w, h, -1, -1) + cr(0, h, 1, -1) + "</g>", "csvg"));
     },
     restrained: function (f, z, w, h) {
-      var chain = function (x0, y0, x1, y1) {
-        var len = Math.hypot(x1 - x0, y1 - y0), a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI, n = Math.floor(len / 20), s = "";
-        for (var i = 0; i < n; i++) s += '<ellipse cx="' + (i * 20 + 10) + '" cy="0" rx="12" ry="' + (i % 2 ? 2.6 : 6.5) + '"/>';
-        return '<g transform="translate(' + x0 + " " + y0 + ") rotate(" + a + ')"><g class="clinks">' + s + "</g></g>";
+      // big chains criss-crossing the whole window; each one slides off and slams back on now and then
+      var chain = function (x0, y0, x1, y1, i) {
+        var len = Math.hypot(x1 - x0, y1 - y0), a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI, n = Math.ceil(len / 40) + 1, s = "";
+        for (var k = 0; k < n; k++) s += '<ellipse cx="' + (k * 40 + 20) + '" cy="0" rx="24" ry="' + (k % 2 ? 5 : 13) + '"/>';
+        return '<g transform="translate(' + x0 + " " + y0 + ") rotate(" + a + ')"><g class="clinks" style="--len:' + Math.round(len + 80) + "px;animation-delay:" + (i * 1.4) + 's">' + s + "</g></g>";
       };
-      var k = Math.min(w, h) * .55;
-      z.insertAdjacentHTML("beforeend", svg(w, h, '<g class="cchain">' + chain(-10, k, k, -10) + chain(w - k, h + 10, w + 10, h - k) + chain(-10, h - k * .7, k * .7, h + 10) + "</g>", "csvg"));
+      var m = 30;
+      z.insertAdjacentHTML("beforeend", svg(w, h, '<g class="cchain">' +
+        chain(-m, -m, w + m, h + m, 0) + chain(-m, h + m, w + m, -m, 1) + chain(-m, h * .3, w + m, h * .62, 2) + "</g>", "csvg"));
       f.classList.add("cf-restrained");
     },
     grappled: function (f, z, w, h) {
+      var k = Math.min(w, h);
       var vine = function (x0, y0, sx, sy) {
-        var k = Math.min(w, h), d = "M" + x0 + " " + y0, x = x0, y = y0, leaves = "";
-        for (var i = 1; i <= 4; i++) { var nx = x0 + sx * k * .14 * i, ny = y0 + sy * k * .14 * i, cx = (x + nx) / 2 + (i % 2 ? 18 : -18) * sy, cy = (y + ny) / 2 + (i % 2 ? -18 : 18) * sx;
-          d += " Q" + cx + " " + cy + " " + nx + " " + ny; leaves += '<path class="cleaf" style="animation-delay:' + (.3 * i) + 's" d="M' + nx + " " + ny + " q" + (9 * sx) + " " + (-12) + " " + (20 * sx) + " " + (-4) + " q" + (-10 * sx) + " 8 " + (-20 * sx) + ' 4z"/>'; x = nx; y = ny; }
-        return '<path class="cvine" d="' + d + '"/>' + leaves;
+        var d = "M" + x0 + " " + y0, x = x0, y = y0, leaves = "";
+        for (var i = 1; i <= 4; i++) { var nx = x0 + sx * k * .19 * i, ny = y0 + sy * k * .19 * i, cx = (x + nx) / 2 + (i % 2 ? 26 : -26) * sy, cy = (y + ny) / 2 + (i % 2 ? -26 : 26) * sx;
+          d += " Q" + cx + " " + cy + " " + nx + " " + ny;
+          leaves += '<path class="cleaf" style="--d:' + (.18 * i) + '" d="M' + nx + " " + ny + " q" + (13 * sx) + " -17 " + (29 * sx) + " -6 q" + (-14 * sx) + " 11 " + (-29 * sx) + ' 6z"/>'; x = nx; y = ny; }
+        return '<path class="cvine" pathLength="1" d="' + d + '"/>' + leaves;
       };
-      z.insertAdjacentHTML("beforeend", svg(w, h, '<g class="cvines">' + vine(0, h, 1, -1) + vine(w, 0, -1, 1) + vine(0, h * .45, 1, .35) + "</g>", "csvg"));
+      z.insertAdjacentHTML("beforeend", svg(w, h, '<g class="cvines">' + vine(0, h, 1, -1) + vine(w, 0, -1, 1) + vine(0, h * .45, 1, .35) + vine(w, h * .7, -1, -.3) + "</g>", "csvg"));
       f.classList.add("cf-grappled");
     },
     blinded: function (f, z) { el("div", "cblind", z); f.classList.add("cf-blinded"); },
-    invisible: function (f, z) { f.classList.add("cf-invisible"); el("div", "chaze", z); },
+    invisible: function (f, z) { f.classList.add("cf-invisible"); el("div", "cwhite", z); el("div", "chaze", z); },
     raging: function (f, z, w, h) {
       f.classList.add("cf-raging"); el("div", "cedgeglow", z);
-      var fl = el("div", "cflames", z), n = Math.max(8, Math.round(w / 34));
-      for (var i = 0; i < n; i++) { var t = el("i", "", fl); t.style.left = (i / n * 100 + rnd(-2, 2)) + "%"; t.style.height = rnd(28, 60) + "%"; t.style.animationDuration = rnd(.5, 1.1) + "s"; t.style.animationDelay = rnd(-1, 0) + "s"; }
+      var fl = el("div", "cflames", z), n = Math.max(12, Math.round(w / 22));
+      for (var i = 0; i < n; i++) {
+        var t = el("i", "", fl), hgt = rnd(30, 75);
+        t.style.left = (i / n * 100 + rnd(-1.5, 1.5)) + "%"; t.style.height = hgt + "%"; t.style.width = rnd(5, 9) + "%";
+        t.style.animationDuration = rnd(.35, .8) + "s"; t.style.animationDelay = rnd(-1, 0) + "s";
+      }
+      for (var e = 0; e < 10; e++) { var sp = el("i", "cember", z); sp.style.left = rnd(3, 97) + "%"; sp.style.animationDuration = rnd(1.8, 3.4) + "s"; sp.style.animationDelay = rnd(-3.4, 0) + "s"; }
     },
-    exhaustion: function (f, z, w, h, t, x) { var L = Math.max(1, Math.min(6, x.level || 1)); f.classList.add("cf-exhaustion"); f.style.setProperty("--ex", L); if (L >= 3) el("div", "cash", z); },
+    exhaustion: function (f, z, w, h, t, x) {
+      var L = Math.max(1, Math.min(6, x.level || 1)); f.classList.add("cf-exhaustion"); f.style.setProperty("--ex", L);
+      el("div", "cdark", f); if (L >= 3) el("div", "cash", z);
+    },
   };
   function zap(f, w, h, t, col) {
     var W = w + 2 * t + 16, H = h + 2 * t + 16, z = document.createElement("div");
@@ -149,13 +189,18 @@
       '<rect class="z2" x="8" y="8" width="' + (W - 16) + '" height="' + (H - 16) + '" fill="none" stroke="#fff" stroke-width="1.2" pathLength="100"/>', "csvg");
     f.appendChild(z);
   }
-  function concentrating(z, big) {
-    var r = big ? 46 : 32, runes = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ", d = 2 * r + 20;
-    var ring = el("div", "cconc", z); ring.style.width = ring.style.height = d + "px";
-    ring.innerHTML = svg(d, d, '<defs><path id="cc' + (concentrating.n = (concentrating.n || 0) + 1) + '" d="M' + (d / 2) + " " + (d / 2) + " m-" + r + " 0 a" + r + " " + r + " 0 1 1 " + 2 * r + " 0 a" + r + " " + r + " 0 1 1 -" + 2 * r + ' 0"/></defs>' +
-      '<circle cx="' + d / 2 + '" cy="' + d / 2 + '" r="' + (r + 7) + '" fill="none" stroke="#8cc4ff" stroke-width="1" opacity=".6"/>' +
-      '<circle cx="' + d / 2 + '" cy="' + d / 2 + '" r="' + (r - 7) + '" fill="none" stroke="#8cc4ff" stroke-width="1" opacity=".6"/>' +
-      '<text font-size="' + (big ? 12 : 10) + '" fill="#bfe0ff" letter-spacing="2"><textPath href="#cc' + concentrating.n + '">' + runes + runes.slice(0, 6) + "</textPath></text>", "csvg");
+  // CONCENTRATING: faint runes fading in and out at random all around the frame; blue frame glow when it's the only effect
+  function concentrating(f, z, w, h, alone) {
+    var runes = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ", big = w >= 380, fs = big ? 26 : 18, gap = big ? 46 : 34;
+    if (alone) f.classList.add("cf-concentrating");
+    var box = el("div", "crunes", z), per = 2 * (w + h), n = Math.round(per / gap), inset = fs * .75;
+    for (var i = 0; i < n; i++) {
+      var d = i / n * per, x, y;
+      if (d < w) { x = d; y = inset; } else if (d < w + h) { x = w - inset; y = d - w; } else if (d < 2 * w + h) { x = w - (d - w - h); y = h - inset; } else { x = inset; y = h - (d - 2 * w - h); }
+      var r = el("i", "", box); r.textContent = runes.charAt(Math.floor(Math.random() * runes.length));
+      r.style.left = x + "px"; r.style.top = y + "px"; r.style.fontSize = fs + "px";
+      r.style.animationDuration = rnd(3.5, 7) + "s"; r.style.animationDelay = rnd(-7, 0) + "s";
+    }
   }
 
   /* apply to one camera frame. f = .frame element, s = slot {w,h,size}, t = border px */
@@ -168,9 +213,13 @@
     var main = null;
     for (var i = 0; i < list.length; i++) if (FX[list[i].id]) { main = list[i]; break; }
     if (main) build[main.id](f, z, s.w, s.h, t, main);
-    if (list.some(function (x) { return x.id === "concentrating"; })) concentrating(z, big);
-    var mk = el("div", "cmarks" + (big ? " big" : ""), f); mk.style.left = (t + (big ? 12 : 8)) + "px"; mk.style.top = (t + (big ? 12 : 8)) + "px";
-    mk.innerHTML = markerHTML(list, big);
+    if (list.some(function (x) { return x.id === "concentrating"; })) concentrating(f, z, s.w, s.h, !main);
+    // the top condition gets a big icon with its name beside it; any others sit after it as small icons
+    var lead = main || list[0], rest = list.filter(function (x) { return x !== lead; });
+    var mk = el("div", "cmarks" + (big ? " big" : ""), f); mk.style.left = (t + (big ? 14 : 9)) + "px"; mk.style.top = (t + (big ? 14 : 9)) + "px";
+    var c = BY[lead.id];
+    mk.innerHTML = '<span class="clead c-' + c.id + '" style="--cc:' + c.col + '">' + markerHTML([lead]) + '<b class="clabel">' + c.name + (lead.id === "exhaustion" && lead.level ? " " + lead.level : "") + "</b></span>" +
+      (rest.length ? '<span class="crest">' + markerHTML(rest) + "</span>" : "");
   }
 
   window.ReditusConditions = { list: C, byId: BY, fromDDB: DDB, apply: apply, normalize: norm, markerHTML: markerHTML, icon: function (id) { return BY[id] ? iconSVG(BY[id]) : ""; } };

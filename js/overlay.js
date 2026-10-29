@@ -394,7 +394,7 @@
   }
   function hpTick() {
     var c = hpCfg();
-    if (!c.url || UNDER || !D) return;
+    if (!c.url || UNDER || !D || SCENE === "sampler") return;
     var ids = (D.party || []).map(ddbId).filter(Boolean);
     var u = c.url.replace(/\/+$/, "") + "/hp?ids=" + ids.join(",") + "&t=" + Date.now();
     fetch(u, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
@@ -427,7 +427,7 @@
   }
   /* D&D Beyond is the source of truth: for every character with a sheet link, level / race / class / AC / max HP /
      ability scores come from the sheet (checked once a minute) and override what's typed in data.js. */
-  var SHEET = {}, SHEETSIG = "";
+  var SHEET = {}, SHEETSIG = "{}";
   function applySheets() {
     (D && D.party || []).forEach(function (p) {
       var sh = SHEET[ddbId(p)]; if (!sh || sh.error || p.sheetSync === false) return;
@@ -437,7 +437,7 @@
     });
   }
   function sheetTick() {
-    var c = hpCfg(); if (!c.url || UNDER || !D) return;
+    var c = hpCfg(); if (!c.url || UNDER || !D || SCENE === "sampler") return;
     var ids = (D.party || []).map(ddbId).filter(Boolean); if (!ids.length) return;
     var base = c.url.replace(/\/+$/, "");
     Promise.all(ids.map(function (id) {
