@@ -340,7 +340,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function fit() { var t = "scale(" + (screen.clientWidth / 1920) + ")"; pv.style.transform = t; pvu.style.transform = t; }
   addEventListener("resize", fit); if ("ResizeObserver" in window) new ResizeObserver(fit).observe(screen); fit();
   function pvUrl() {
-    var sc = $("pv-scene").value, u = "index.html?scene=" + sc;
+    var sc = $("pv-scene").value, u = "index.html?t=" + Date.now() + "&scene=" + sc;
     if (sc === "spotlight") u += "&focus=" + encodeURIComponent($("pv-focus").value || "");
     return u;
   }

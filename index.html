@@ -3,10 +3,14 @@
 <head>
 <meta charset="utf-8">
 <title>Reditus Overlay</title>
-<link rel="stylesheet" href="css/overlay.css">
+<script>
+  // always load the newest code (GitHub Pages lets browsers cache files for 10 minutes)
+  var V = Date.now();
+  document.write('<link rel="stylesheet" href="css/overlay.css?v=' + V + '">');
+</script>
 </head>
 <body>
 <div id="stage"></div>
-<script src="js/overlay.js"></script>
+<script>document.write('<script src="js/overlay.js?v=' + V + '"><\/script>');</script>
 </body>
 </html>
