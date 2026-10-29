@@ -301,30 +301,42 @@
       var cx = s.x + s.w / 2, cy = s.npPos === "top" ? s.y - t / 2 : s.y + s.h + t / 2;
       var npSize = s.w < 260 ? "xs" : z.np;
       nameplate(parent, s.label, cx, cy, npSize);
-      if (s.id !== "gm" && s.npPos !== "top" && s.who && ddbId(s.who)) hpBar(parent, s, cy - (NP[npSize] || NP.s).h / 2);
+      if (s.id !== "gm" && s.npPos !== "top" && s.who) hpBar(parent, s, cy - (NP[npSize] || NP.s).h / 2);
     }
     return f;
   }
-  /* ---------------- live hit points (D&D Beyond via the HP relay) ---------------- */
-  var HP = {};      // ddb id → { max, current, temp, deathSaves } from the relay
-  var HPSHOWN = {}; // ddb id → the HP last drawn, so a change can be animated
-  var HPBARS = [];  // bars on screen right now
-  function ddbId(p) { var m = String((p && p.ddb) || "").match(/(\d{3,12})\s*\/?\s*$/) || String((p && p.ddb) || "").match(/characters\/(\d+)/); return m ? m[1] : ""; }
+  /* ---------------- live hit points (D&D Beyond via the HP relay, plus battle mode + manual overrides) ---------------- */
+  var HP = {};       // ddb id → { max, current, temp, deathSaves } from the relay
+  var MANUAL = {};   // party id → { current, temp, max } set from the control panel's Battle tab
+  var BATTLE = null; // battle mode from the relay (null = relay has no storage; fall back to data.js)
+  var HPSHOWN = {};  // party id → HP last drawn, so a change can be animated
+  var HPBARS = [];   // bars on screen right now
+  var HPSIG = "";
+  function ddbId(p) { var t = String((p && p.ddb) || ""), m = t.match(/characters\/(\d+)/) || t.match(/^\s*(\d{3,12})\s*$/); return m ? m[1] : ""; }
   function hpCfg() { return (D && D.hpRelay) || {}; }
-  function hpOn() { var c = hpCfg(); return !!c.url && c.bars !== false; }
+  function battleOn() { return BATTLE != null ? BATTLE : !!hpCfg().battle; }
+  function hpOn() { var c = hpCfg(); return !!c.url && c.bars !== false && battleOn(); }
+  function hpFor(p) {
+    if (!p) return null;
+    var dd = HP[ddbId(p)], m = MANUAL[p.id];
+    var ddOk = dd && !dd.error && dd.max ? dd : null;
+    if (m) return { max: m.max || (ddOk && ddOk.max) || p.hp || 1, current: m.current, temp: m.temp || 0, manual: true };
+    return ddOk;
+  }
+  function hpEligible(p) { return !!(p && (MANUAL[p.id] || ddbId(p))); }
   function hpBar(parent, s, npTop) {
-    if (!hpOn()) return;
-    var id = ddbId(s.who), big = s.w >= 380;
+    if (!hpOn() || !hpEligible(s.who)) return;
+    var big = s.w >= 380;
     var bw = Math.min(s.w * (big ? .58 : .66), 420), bh = big ? 16 : 12;
     var b = el("div", "hpbar" + (big ? " big" : ""), parent);
     place(b, s.x + (s.w - bw) / 2, npTop - bh - (big ? 12 : 8), bw, bh);
     b.innerHTML = '<div class="trk"><i class="lag"></i><i class="fill"></i><i class="tmp"></i></div><div class="num"></div><div class="ds"></div>';
-    b._id = id; HPBARS.push(b);
+    b._p = s.who; HPBARS.push(b);
     drawBar(b, false);
   }
   function drawBar(b, animate) {
-    var h = HP[b._id];
-    if (!h || h.error || !h.max) { b.classList.add("nodata"); return; }
+    var h = hpFor(b._p);
+    if (!h || !h.max) { b.classList.add("nodata"); return; }
     b.classList.remove("nodata");
     var max = h.max, cur = Math.max(0, Math.min(max, h.current)), tmp = Math.max(0, h.temp || 0);
     var pct = cur / max, tpct = Math.min(1 - pct, tmp / max);
@@ -337,9 +349,9 @@
     b.querySelector(".num").textContent = cur + (tmp ? " +" + tmp : "") + " / " + max;
     b.classList.toggle("low", cur > 0 && pct <= .25);
     b.classList.toggle("down", cur === 0);
-    var ds = h.deathSaves || {};
-    b.querySelector(".ds").innerHTML = cur === 0 && !ds.stable && (ds.success || ds.fail)
-      ? '<span class="s">' + "●".repeat(ds.success) + "○".repeat(3 - Math.min(3, ds.success)) + '</span><span class="f">' + "●".repeat(ds.fail) + "○".repeat(3 - Math.min(3, ds.fail)) + "</span>" : "";
+    var ds = h.deathSaves || {}, sc = Math.min(3, ds.success || 0), fc = Math.min(3, ds.fail || 0);
+    b.querySelector(".ds").innerHTML = cur === 0 && !ds.stable && (sc || fc)
+      ? '<span class="s">' + "●".repeat(sc) + "○".repeat(3 - sc) + '</span><span class="f">' + "●".repeat(fc) + "○".repeat(3 - fc) + "</span>" : "";
   }
   function popNumber(b, delta) {
     var p = el("div", "hppop " + (delta < 0 ? "dmg" : "heal"), b);
@@ -351,17 +363,19 @@
     var c = hpCfg();
     if (!c.url || UNDER || !D) return;
     var ids = (D.party || []).map(ddbId).filter(Boolean);
-    if (!ids.length) return;
     var u = c.url.replace(/\/+$/, "") + "/hp?ids=" + ids.join(",") + "&t=" + Date.now();
     fetch(u, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
-      var ch = (j && j.chars) || {};
-      Object.keys(ch).forEach(function (id) {
-        var h = ch[id]; HP[id] = h;
-        if (!h || h.error) return;
-        var prev = HPSHOWN[id], now = (h.current || 0) + (h.temp || 0);
-        HPSHOWN[id] = now;
+      if (!j) return;
+      HP = j.chars || {}; MANUAL = j.manual || {}; BATTLE = typeof j.battle === "boolean" ? j.battle : null;
+      // battle switched or someone gained/lost a bar → rebuild the screen; otherwise just animate the bars
+      var sig = hpOn() + "|" + (D.party || []).filter(hpEligible).map(function (p) { return p.id; }).join(",");
+      if (sig !== HPSIG) { HPSIG = sig; render(); }
+      (D.party || []).forEach(function (p) {
+        var h = hpFor(p); if (!h) return;
+        var now = (h.current || 0) + (h.temp || 0), prev = HPSHOWN[p.id];
+        HPSHOWN[p.id] = now;
         HPBARS.forEach(function (b) {
-          if (b._id !== id || !b.isConnected) return;
+          if (b._p.id !== p.id || !b.isConnected) return;
           drawBar(b, true);
           if (prev != null && prev !== now) popNumber(b, now - prev);
         });
@@ -371,13 +385,13 @@
     }).catch(function () {});
   }
   function refreshHeartBadges() {
-    if (!hpOn()) return;
-    document.querySelectorAll(".badge.hp[data-ddb]").forEach(function (e) {
-      var h = HP[e.getAttribute("data-ddb")]; if (!h || h.error) return;
-      e.querySelector("b").textContent = Math.max(0, h.current);
+    document.querySelectorAll(".badge.hp[data-pid]").forEach(function (e) {
+      var p = (D.party || []).filter(function (x) { return x.id === e.getAttribute("data-pid"); })[0];
+      var h = hpOn() && hpFor(p), b = e.querySelector("b");
+      b.textContent = h ? Math.max(0, h.current) : stat(p && p.hp);
     });
   }
-  (function hpLoop() { hpTick(); setTimeout(hpLoop, Math.max(2, +(hpCfg().seconds || 5)) * 1000); })();
+  (function hpLoop() { hpTick(); setTimeout(hpLoop, Math.max(2, +(hpCfg().seconds || 4)) * 1000); })();
 
   // When a later window sits on top of an earlier frame (GM cam over the battle map), cut it out of the earlier frame.
   function cutOverlaps(frames, slots) {
@@ -506,7 +520,7 @@
       inner.innerHTML = '<div class="char" style="display:flex;align-items:center;width:100%"><div class="who"><div class="nm">' + esc(p.fullName || p.name) +
         '</div><div class="sub">' + sub + '</div></div><div class="dice">' + dice + "</div></div>";
       var b = el("div", "badges", box);
-      b.innerHTML = '<div class="badge ac">' + SHIELD + "<b>" + esc(stat(p.ac)) + '</b></div><div class="badge hp"' + (ddbId(p) ? ' data-ddb="' + ddbId(p) + '"' : "") + ">" + HEART + "<b>" + esc(stat(p.hp)) + "</b></div>";
+      b.innerHTML = '<div class="badge ac">' + SHIELD + "<b>" + esc(stat(p.ac)) + '</b></div><div class="badge hp" data-pid="' + esc(p.id) + '">' + HEART + "<b>" + esc(stat(p.hp)) + "</b></div>";
       setTimeout(refreshHeartBadges, 0);
     }
     return u;

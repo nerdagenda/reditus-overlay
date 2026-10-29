@@ -29,6 +29,18 @@ button, select, input, textarea { font: inherit; color: var(--text); }
 .btn.primary { background: linear-gradient(180deg, #f3cf8f, #c4894c); color: #1c1205; border-color: #f3cf8f; font-weight: 600; }
 .btn.primary:disabled { opacity: .45; cursor: default; }
 .btn.small { padding: 4px 9px; font-size: 12px; }
+.btn.battle[aria-pressed="true"] { background: linear-gradient(180deg, #d4202a, #7a0c14); border-color: #ff8a80; color: #fff; font-weight: 600; box-shadow: 0 0 14px rgba(255, 60, 60, .45); }
+.hprow { display: grid; grid-template-columns: minmax(110px, 1fr) auto; gap: 8px 14px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+.hprow:first-of-type { border-top: 0; }
+.hprow .who b { display: block; font-size: 15px; }
+.hprow .who small { color: var(--muted); }
+.hprow .who small.man { color: #ffb86b; }
+.hpmeter { height: 8px; background: #2a0a10; border: 1px solid #c9a063; margin-top: 6px; position: relative; overflow: hidden; }
+.hpmeter i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #8e0e17, #ff5a4f); transition: width .3s; }
+.hpmeter i.t { background: #3a9cd8; }
+.hpbtns { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: flex-end; }
+.hpbtns input { width: 58px; }
+.hpbtns .btn.dmg { color: #ff8a80; } .hpbtns .btn.heal { color: #8fe08f; }
 .btn.danger:hover { border-color: var(--bad); color: var(--bad); }
 :focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
 
@@ -83,6 +95,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 <div class="top"><div class="in">
   <h1>Reditus Overlay · Control Panel</h1>
   <span class="status" id="status">Loading…</span>
+  <button class="btn battle" id="b-battle" type="button" aria-pressed="false" title="Turns the HP bars on or off on stream, instantly">⚔ Battle mode: off</button>
   <button class="btn" id="b-revert" type="button">Discard changes</button>
   <button class="btn primary" id="b-publish" type="button" disabled>Publish to stream</button>
   <button class="btn small" id="b-token" type="button" title="GitHub access for publishing">GitHub key</button>
@@ -95,11 +108,13 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       <button role="tab" id="tab-ticker" aria-selected="false" data-t="ticker">Scrolling bar</button>
       <button role="tab" id="tab-show" aria-selected="false" data-t="show">Show &amp; GM</button>
       <button role="tab" id="tab-break" aria-selected="false" data-t="break">Break screen</button>
+      <button role="tab" id="tab-battle" aria-selected="false" data-t="battle">Battle / HP</button>
     </div>
     <section id="s-party"></section>
     <section id="s-ticker" hidden></section>
     <section id="s-show" hidden></section>
     <section id="s-break" hidden></section>
+    <section id="s-battle" hidden></section>
   </main>
 
   <aside class="preview">
@@ -165,7 +180,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     viaApi.catch(function () { return fetch("data.js?t=" + Date.now()).then(function (r) { return r.text(); }); })
       .then(function (text) {
         S = parseDataJs(text); ORIG = JSON.stringify(S);
-        renderAll(); dirty(); pushPreview(true);
+        renderAll(); dirty(); pushPreview(true); relayPoll();
         status(token ? "Loaded the latest saved version." : "Loaded. Add your GitHub key to publish.", token ? "good" : "warn");
       })
       .catch(function (e) { status("Couldn't load data.js: " + e.message, "bad"); });
@@ -340,6 +355,100 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     root.appendChild(e);
   }
 
+  /* ---------- Battle / HP (talks to the relay directly: changes show on stream within seconds, no Publish needed) ---------- */
+  var hpKey = LS.get("reditus-hp-key") || "";
+  var LIVE = { chars: {}, manual: {}, battle: null }, hpPending = {}, hpSendTimer = null, hpErr = "";
+  function relayUrl() { return S && S.hpRelay && S.hpRelay.url ? S.hpRelay.url.replace(/\/+$/, "") : ""; }
+  function ddbOf(p) { var t = String(p.ddb || ""), m = t.match(/characters\/(\d+)/) || t.match(/^\s*(\d{3,12})\s*$/); return m ? m[1] : ""; }
+  function hpOf(p) {
+    var m = LIVE.manual[p.id], d = LIVE.chars[ddbOf(p)], ok = d && !d.error && d.max ? d : null;
+    if (m) return { max: m.max || (ok && ok.max) || p.hp || 1, current: m.current, temp: m.temp || 0, src: "manual" };
+    if (ok) return { max: ok.max, current: ok.current, temp: ok.temp || 0, src: "ddb" };
+    return { max: p.hp || 1, current: p.hp || 0, temp: 0, src: d && d.error ? "err:" + d.error : "none" };
+  }
+  function relayPoll() {
+    var u = relayUrl(); if (!u || !S) return;
+    var ids = S.party.map(ddbOf).filter(Boolean);
+    fetch(u + "/hp?ids=" + ids.join(",") + "&t=" + Date.now()).then(function (r) { return r.json(); }).then(function (j) {
+      LIVE.chars = j.chars || {}; LIVE.battle = typeof j.battle === "boolean" ? j.battle : null;
+      // keep values we're still sending, so the numbers don't jump back while a click is in flight
+      LIVE.manual = Object.assign({}, j.manual || {}, hpPending);
+      hpErr = LIVE.battle === null ? "The relay has no storage yet (KV not bound), so battle mode and manual HP can't be saved." : "";
+      paintBattle();
+    }).catch(function () { hpErr = "Can't reach the relay."; paintBattle(); });
+  }
+  setInterval(relayPoll, 3000);
+  function sendState(body) {
+    var u = relayUrl();
+    if (!u) { status("Add the HP relay address first (Show & GM tab).", "bad"); return Promise.reject(); }
+    if (!hpKey) { status("Add the relay key in the Battle / HP tab first.", "bad"); $("tab-battle").click(); return Promise.reject(); }
+    return fetch(u + "/state", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + hpKey }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); })
+      .then(function (j) { LIVE.battle = j.state.battle; status("Sent to the stream.", "good"); paintBattle(); return j; })
+      .catch(function (e) { if (e) status("Relay said: " + e.message, "bad"); });
+  }
+  $("b-battle").addEventListener("click", function () { sendState({ battle: !LIVE.battle }); });
+  function setHp(p, cur, temp) {
+    var h = hpOf(p);
+    var v = { current: Math.max(0, Math.min(h.max, Math.round(cur))), temp: Math.max(0, Math.round(temp == null ? h.temp : temp)), max: h.max };
+    LIVE.manual[p.id] = v; hpPending[p.id] = v; paintBattle();
+    clearTimeout(hpSendTimer);
+    hpSendTimer = setTimeout(function () {
+      var body = { manual: hpPending }; hpPending = {};
+      sendState(body);
+    }, 300);
+  }
+  function damage(p, n) { var h = hpOf(p), t = h.temp, left = n; if (t) { var a = Math.min(t, left); t -= a; left -= a; } setHp(p, h.current - left, t); }
+  function heal(p, n) { var h = hpOf(p); setHp(p, h.current + n, h.temp); }
+  function renderBattle() {
+    var root = $("s-battle"); root.innerHTML = "";
+    var c = document.createElement("div"); c.className = "card";
+    c.innerHTML = "<h3>Battle mode</h3><p class=\"hint\">The <b>⚔ Battle mode</b> button at the top turns the HP bars on and off on stream. It takes effect in a few seconds, with no Publish needed. Outside battle mode the bars stay hidden.</p>";
+    var g = document.createElement("div"); g.className = "grid";
+    var kf = field("Relay key (saved on this computer only)", hpKey, function (v) { hpKey = v.trim(); LS.set("reditus-hp-key", hpKey || null); }, { id: "h-key", type: "password" });
+    g.appendChild(kf); c.appendChild(g);
+    var st = document.createElement("p"); st.className = "hint"; st.id = "hp-state"; c.appendChild(st);
+    root.appendChild(c);
+    var d = document.createElement("div"); d.className = "card"; d.id = "hp-list";
+    d.innerHTML = "<h3>Hit points</h3><p class=\"hint\">Normally each bar follows the player's D&amp;D Beyond sheet. Pressing a button here switches that character to <b>manual</b> until you press <b>Use D&amp;D Beyond</b>. Damage comes off temp HP first.</p>";
+    S.party.forEach(function (p) {
+      var row = document.createElement("div"); row.className = "hprow"; row.setAttribute("data-pid", p.id);
+      var who = document.createElement("div"); who.className = "who";
+      who.innerHTML = "<b>" + esc(p.fullName || p.name) + '</b><small class="src"></small><div class="hpmeter"><i class="c"></i><i class="t"></i></div>';
+      row.appendChild(who);
+      var b = document.createElement("div"); b.className = "hpbtns";
+      [-10, -5, -1].forEach(function (n) { b.appendChild(btn(String(n), function () { damage(p, -n); }, "dmg")); });
+      [1, 5, 10].forEach(function (n) { b.appendChild(btn("+" + n, function () { heal(p, n); }, "heal")); });
+      var amt = document.createElement("input"); amt.type = "number"; amt.min = 0; amt.placeholder = "amt"; amt.setAttribute("aria-label", "Amount for " + (p.name || ""));
+      b.appendChild(amt);
+      b.appendChild(btn("Damage", function () { var n = +amt.value; if (n > 0) { damage(p, n); amt.value = ""; } }, "dmg"));
+      b.appendChild(btn("Heal", function () { var n = +amt.value; if (n > 0) { heal(p, n); amt.value = ""; } }, "heal"));
+      b.appendChild(btn("Set temp", function () { var n = +amt.value; if (amt.value !== "") { setHp(p, hpOf(p).current, n); amt.value = ""; } }));
+      b.appendChild(btn("Full", function () { setHp(p, hpOf(p).max, 0); }));
+      b.appendChild(btn("Use D&D Beyond", function () { delete LIVE.manual[p.id]; delete hpPending[p.id]; var m = {}; m[p.id] = null; sendState({ manual: m }); paintBattle(); }));
+      row.appendChild(b); d.appendChild(row);
+    });
+    root.appendChild(d);
+    paintBattle();
+  }
+  function paintBattle() {
+    var bb = $("b-battle");
+    bb.setAttribute("aria-pressed", LIVE.battle ? "true" : "false");
+    bb.textContent = "⚔ Battle mode: " + (LIVE.battle ? "ON" : "off");
+    var st = $("hp-state");
+    if (st) st.textContent = !relayUrl() ? "No relay address yet. Add it in Show & GM → Live HP bars." : hpErr || (LIVE.battle ? "Battle mode is ON. HP bars are showing on stream." : "Battle mode is off.");
+    if (!S) return;
+    S.party.forEach(function (p) {
+      var row = document.querySelector('.hprow[data-pid="' + p.id + '"]'); if (!row) return;
+      var h = hpOf(p), src = row.querySelector(".src");
+      src.className = "src" + (h.src === "manual" ? " man" : "");
+      src.textContent = h.current + (h.temp ? " +" + h.temp + " temp" : "") + " / " + h.max + " · " +
+        (h.src === "manual" ? "manual (D&D Beyond ignored)" : h.src === "ddb" ? "from D&D Beyond" : h.src === "none" ? (ddbOf(p) ? "waiting for D&D Beyond…" : "no sheet link, manual only") : "D&D Beyond: " + h.src.slice(4));
+      row.querySelector(".c").style.width = Math.min(100, h.current / h.max * 100) + "%";
+      var t = row.querySelector(".t"); t.style.left = Math.min(100, h.current / h.max * 100) + "%"; t.style.width = Math.min(100 - h.current / h.max * 100, h.temp / h.max * 100) + "%";
+    });
+  }
+
   /* ---------- Break ---------- */
   function renderBreak() {
     var B = S.breakScreen = S.breakScreen || {};
@@ -362,7 +471,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
   function renderAll() {
     if (!S) return;
-    renderParty(); renderTicker(); renderShow(); renderBreak();
+    renderParty(); renderTicker(); renderShow(); renderBreak(); renderBattle();
     var f = $("pv-focus"), cur = f.value;
     f.innerHTML = S.party.filter(function (p) { return p.seat !== false; }).map(function (p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>"; }).join("");
     if (cur) f.value = cur;
@@ -372,7 +481,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   document.querySelectorAll(".tabs button").forEach(function (b) {
     b.addEventListener("click", function () {
       document.querySelectorAll(".tabs button").forEach(function (x) { x.setAttribute("aria-selected", x === b ? "true" : "false"); });
-      ["party", "ticker", "show", "break"].forEach(function (t) { $("s-" + t).hidden = t !== b.dataset.t; });
+      ["party", "ticker", "show", "break", "battle"].forEach(function (t) { $("s-" + t).hidden = t !== b.dataset.t; });
     });
   });
 

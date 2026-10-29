@@ -4,7 +4,14 @@
    keeps only the hit-point numbers, caches them for a few seconds, and answers with CORS
    headers so the overlay (on GitHub Pages / OBS) is allowed to read it.
    GET /            → health check
-   GET /hp?ids=…&debug=1 → also returns the raw HP fields, for checking the maths against the sheet */
+   GET /hp?ids=…&debug=1 → also returns the raw HP fields, for checking the maths against the sheet
+
+   Battle mode + manual HP (optional, needs a KV namespace bound as HP and a secret ADMIN_KEY):
+   POST /state  (header  Authorization: Bearer <ADMIN_KEY>)
+     { "battle": true }                                   → bars on / off
+     { "manual": { "felix": { "current": 40, "temp": 0 } } } → override one character's HP
+     { "manual": { "felix": null } }                       → back to D&D Beyond
+   GET /hp also returns { battle, manual } so the overlay picks changes up on its next check. */
 
 const CACHE_SECONDS = 4;
 
@@ -14,22 +21,54 @@ export default {
     const headers = {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
       "Cache-Control": "no-store",
     };
+    const json = (o, status) => new Response(JSON.stringify(o), { status: status || 200, headers });
     if (req.method === "OPTIONS") return new Response(null, { headers });
-    if (url.pathname !== "/hp") return new Response(JSON.stringify({ ok: true, service: "reditus-hp-relay" }), { headers });
+
+    if (url.pathname === "/state" && req.method === "POST") {
+      if (!env.HP) return json({ error: "no KV namespace bound as HP" }, 500);
+      if (!env.ADMIN_KEY || req.headers.get("Authorization") !== "Bearer " + env.ADMIN_KEY) return json({ error: "wrong key" }, 401);
+      let body; try { body = await req.json(); } catch (e) { return json({ error: "bad json" }, 400); }
+      const st = await readState(env);
+      if (typeof body.battle === "boolean") st.battle = body.battle;
+      if (body.manual && typeof body.manual === "object") {
+        Object.keys(body.manual).slice(0, 20).forEach((k) => {
+          const v = body.manual[k];
+          if (!/^[\w-]{1,40}$/.test(k)) return;
+          if (v === null) delete st.manual[k];
+          else st.manual[k] = { current: Math.max(0, Math.round(+v.current || 0)), temp: Math.max(0, Math.round(+v.temp || 0)), max: v.max != null ? Math.max(1, Math.round(+v.max)) : undefined };
+        });
+      }
+      st.updated = Date.now();
+      await env.HP.put("state", JSON.stringify(st));
+      return json({ ok: true, state: st });
+    }
+
+    if (url.pathname !== "/hp") return json({ ok: true, service: "reditus-hp-relay", kv: !!env.HP, key: !!env.ADMIN_KEY });
 
     const debug = url.searchParams.get("debug") === "1";
     const ids = [...new Set((url.searchParams.get("ids") || "").split(",").map((s) => s.trim()).filter((s) => /^\d{3,12}$/.test(s)))].slice(0, 12);
     const chars = {};
+    const stP = env.HP ? readState(env) : Promise.resolve(null);
     await Promise.all(ids.map(async (id) => {
       try { chars[id] = await getChar(id, ctx, debug); }
       catch (e) { chars[id] = { error: String(e && e.message || e) }; }
     }));
-    return new Response(JSON.stringify({ t: Date.now(), chars }), { headers });
+    const st = await stP;
+    return json({ t: Date.now(), battle: st ? !!st.battle : null, manual: st ? st.manual : {}, chars });
   },
 };
+
+async function readState(env) {
+  let st = null;
+  try { st = await env.HP.get("state", { type: "json" }); } catch (e) {}
+  st = st || {};
+  st.manual = st.manual || {};
+  return st;
+}
 
 async function getChar(id, ctx, debug) {
   const key = new Request("https://reditus-hp-cache/" + id + (debug ? "?d" : ""));
