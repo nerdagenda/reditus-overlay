@@ -70,6 +70,18 @@ section[hidden] { display: none !important; }
 .card h3 .spacer { flex: 1; }
 .card h3 .btn { font-family: var(--body); letter-spacing: 0; }
 .card.off { opacity: .7; }
+.card .fold { width: 30px; height: 30px; flex: none; display: grid; place-items: center; background: none; border: 1px solid var(--line); color: var(--gold-hi); cursor: pointer; padding: 0; font-size: 13px; transition: transform .15s; }
+.card .fold:hover { border-color: var(--gold-hi); }
+.card.collapsed .fold { transform: rotate(-90deg); }
+.card h3 .title { cursor: pointer; }
+.card.collapsed > :not(h3) { display: none; }
+.card.collapsed h3 { margin-bottom: 0; }
+.foldall { display: flex; gap: 8px; margin: 0 0 10px; }
+.card .grip { cursor: grab; color: var(--muted, #8a93a8); font-size: 20px; line-height: 1; padding: 2px 4px; user-select: none; flex: none; }
+.card .grip:hover { color: var(--gold-hi); }
+.card.dragging { opacity: .4; }
+.card.drop-before { box-shadow: 0 -4px 0 var(--gold-hi); }
+.card.drop-after { box-shadow: 0 4px 0 var(--gold-hi); }
 .grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .grid.stats { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 @media (max-width: 520px) { .grid.stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
@@ -436,17 +448,47 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function mod(v) { if (v == null || v === "") return ""; var m = Math.floor((v - 10) / 2); return (m >= 0 ? "+" : "") + m; }
 
   /* ---------- Party ---------- */
+  var DRAG = null, FOLD = {}; try { FOLD = JSON.parse(LS.get("reditus-fold") || "{}") || {}; } catch (e) { FOLD = {}; }
   var STATS = [["str", "STR"], ["dex", "DEX"], ["con", "CON"], ["int", "INT"], ["wis", "WIS"], ["cha", "CHA"]];
   function renderParty() {
     var root = $("s-party"); root.innerHTML = "";
     var intro = document.createElement("p"); intro.className = "hint";
     intro.innerHTML = "Order here is the seat order on every screen. <b>Camera window</b> off = no window (like Verris). Each player's idle loop always plays on the <b>bottom layer</b>, under their camera, so it shows whenever their camera is off. <b>Transparent bottom loop</b> hides it. <b>Cover camera with loop</b> puts the loop on the top layer, over their camera, to cover it remotely. For characters with a D&amp;D Beyond link, level, race, class, AC, max HP and ability scores come straight from their sheet (checked every minute), so leveling up on D&amp;D Beyond updates the stream by itself. Untick <b>Stats from D&amp;D Beyond</b> to type them in by hand instead.";
     root.appendChild(intro);
+    var fa = document.createElement("div"); fa.className = "foldall";
+    fa.appendChild(btn("Collapse all", function () { S.party.forEach(function (p, i) { FOLD[p.id || ("idx" + i)] = 1; }); LS.set("reditus-fold", JSON.stringify(FOLD)); renderParty(); }));
+    fa.appendChild(btn("Expand all", function () { FOLD = {}; LS.set("reditus-fold", "{}"); renderParty(); }));
+    root.appendChild(fa);
     S.party.forEach(function (p, idx) {
       var c = document.createElement("div"); c.className = "card" + (p.seat === false ? " off" : "");
       var h = document.createElement("h3");
-      var img = document.createElement("img"); img.className = "portrait"; img.alt = ""; img.src = p.portrait || ""; h.appendChild(img);
-      h.appendChild(document.createTextNode(p.fullName || p.name || "New character"));
+      var fkey = p.id || ("idx" + idx);
+      if (FOLD[fkey]) c.classList.add("collapsed");
+      var fold = document.createElement("button"); fold.type = "button"; fold.className = "fold"; fold.textContent = "▼";
+      var toggle = function () { var on = !c.classList.contains("collapsed"); c.classList.toggle("collapsed", on); fold.setAttribute("aria-expanded", String(!on)); if (on) FOLD[fkey] = 1; else delete FOLD[fkey]; LS.set("reditus-fold", JSON.stringify(FOLD)); };
+      fold.setAttribute("aria-expanded", String(!FOLD[fkey])); fold.title = "Show or hide this character's details";
+      fold.onclick = toggle;
+      var grip = document.createElement("span"); grip.className = "grip"; grip.textContent = "⠿"; grip.title = "Drag to reorder";
+      grip.addEventListener("mousedown", function () { c.draggable = true; });
+      grip.addEventListener("touchstart", function () { c.draggable = true; }, { passive: true });
+      h.appendChild(grip); h.appendChild(fold);
+      c.dataset.idx = idx;
+      c.addEventListener("mouseup", function () { c.draggable = false; });
+      c.addEventListener("dragstart", function (e) { if (!c.draggable) { e.preventDefault(); return; } DRAG = idx; c.classList.add("dragging"); e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", String(idx)); } catch (er) {} });
+      c.addEventListener("dragend", function () { c.draggable = false; DRAG = null; root.querySelectorAll(".card").forEach(function (x) { x.classList.remove("dragging", "drop-before", "drop-after"); }); });
+      c.addEventListener("dragover", function (e) {
+        if (DRAG == null || DRAG === idx) return; e.preventDefault(); e.dataTransfer.dropEffect = "move";
+        var r = c.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+        c.classList.toggle("drop-after", after); c.classList.toggle("drop-before", !after);
+      });
+      c.addEventListener("dragleave", function () { c.classList.remove("drop-before", "drop-after"); });
+      c.addEventListener("drop", function (e) {
+        if (DRAG == null || DRAG === idx) return; e.preventDefault();
+        var r = c.getBoundingClientRect(), to = idx + (e.clientY > r.top + r.height / 2 ? 1 : 0), from = DRAG;
+        var item = S.party.splice(from, 1)[0]; if (from < to) to--; S.party.splice(to, 0, item); DRAG = null; changed(); renderAll();
+      });
+      var img = document.createElement("img"); img.className = "portrait"; img.alt = ""; img.src = p.portrait || ""; img.onclick = toggle; img.style.cursor = "pointer"; h.appendChild(img);
+      var ttl = document.createElement("span"); ttl.className = "title"; ttl.textContent = p.fullName || p.name || "New character"; ttl.onclick = toggle; h.appendChild(ttl);
       var sp = document.createElement("span"); sp.className = "spacer"; h.appendChild(sp);
       h.appendChild(btn("▲", function () { if (idx > 0) { S.party.splice(idx - 1, 0, S.party.splice(idx, 1)[0]); changed(); renderAll(); } }));
       h.appendChild(btn("▼", function () { if (idx < S.party.length - 1) { S.party.splice(idx + 1, 0, S.party.splice(idx, 1)[0]); changed(); renderAll(); } }));
