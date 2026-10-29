@@ -146,10 +146,13 @@
       var chain = function (x0, y0, x1, y1, i) {
         var len = Math.hypot(x1 - x0, y1 - y0), a = Math.atan2(y1 - y0, x1 - x0) * 180 / Math.PI, n = Math.ceil(len / 40) + 1, s = "";
         for (var k = 0; k < n; k++) s += '<ellipse cx="' + (k * 40 + 20) + '" cy="0" rx="24" ry="' + (k % 2 ? 5 : 13) + '"/>';
-        return '<g transform="translate(' + x0 + " " + y0 + ") rotate(" + a + ')"><g class="clinks" style="--len:' + Math.round(len + 80) + "px;animation-delay:" + (i * 1.4) + 's">' + s + "</g></g>";
+        return '<g transform="translate(' + x0 + " " + y0 + ") rotate(" + a + ')"><g class="clinks" style="--len:' + Math.round(len + 80) + "px;animation-delay:" + (i * .35) + 's">' + s + "</g></g>";
       };
-      var m = 30;
+      var m = 30, sx = Math.max(26, w * .09);
       z.insertAdjacentHTML("beforeend", svg(w, h, '<g class="cchain">' +
+        // two chains that never leave: straight down the left and right sides
+        chain(sx, -m, sx, h + m, 0).replace('class="clinks"', 'class="cside"') + chain(w - sx, -m, w - sx, h + m, 0).replace('class="clinks"', 'class="cside"') +
+        // the criss-cross: slams in over the middle now and then, holds, then slides back out
         chain(-m, -m, w + m, h + m, 0) + chain(-m, h + m, w + m, -m, 1) + chain(-m, h * .3, w + m, h * .62, 2) + "</g>", "csvg"));
       f.classList.add("cf-restrained");
     },

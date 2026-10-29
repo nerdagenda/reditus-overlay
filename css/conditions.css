@@ -112,11 +112,12 @@
 /* RESTRAINED — chains across the corners, tightening; GRAPPLED — vines grow in and sway */
 .cchain ellipse { fill: none; stroke: #cfd1de; stroke-width: 6.5; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .9)); }
 .cchain ellipse:nth-child(odd) { stroke: #b4b7c8; }
-/* slam on → strain → slide off → gone a moment → slam back on */
-.cchain .clinks { animation: cchainin 22s cubic-bezier(.3, 1.3, .5, 1) infinite; }
-@keyframes cchainin { 0% { transform: translateX(calc(var(--len) * -1)); } 5% { transform: translateX(0); } 6% { transform: translateX(-6px); } 7% { transform: translateX(0); }
-  30% { transform: translateX(-8px); } 32% { transform: translateX(0); } 55% { transform: translateX(-8px); } 57% { transform: translateX(0); }
-  80% { transform: translateX(0); } 88% { transform: translateX(var(--len)); } 100% { transform: translateX(var(--len)); } }
+/* side chains stay put (just strain a little); the criss-cross is off most of the time, slams in, holds ~8s, slides back out */
+.cchain .cside { animation: cstrain 3.2s ease-in-out infinite; }
+@keyframes cstrain { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-5px); } }
+.cchain .clinks { transform: translateX(calc(var(--len) * -1)); animation: cchainin 34s cubic-bezier(.3, 1.3, .5, 1) infinite; animation-delay: 6s; }
+@keyframes cchainin { 0%, 44% { transform: translateX(calc(var(--len) * -1)); } 48% { transform: translateX(0); } 49% { transform: translateX(-6px); } 50% { transform: translateX(0); }
+  60% { transform: translateX(-8px); } 62% { transform: translateX(0); } 70% { transform: translateX(0); } 76%, 100% { transform: translateX(var(--len)); } }
 .frame.cf-restrained .edge, .frame.cf-restrained .corner { filter: grayscale(.6) brightness(.9); }
 .cvine { fill: none; stroke: #4f9a2e; stroke-width: 8; stroke-linecap: round; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, .85)); stroke-dasharray: 1 1; stroke-dashoffset: 1; animation: cgrow 22s ease-out infinite; }
 .cleaf { fill: #78c94a; stroke: #2f6a18; stroke-width: 1.2; opacity: 0; animation: cleaf 22s ease-out infinite; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .75)); }
@@ -130,10 +131,10 @@
 
 
 /* BLINDED — darkness closes in from the edges, centre stays clear */
-/* BLINDED — blinding light closing in from the edges (white), centre stays clear */
-.cblind { position: absolute; inset: -8%; background: radial-gradient(ellipse 46% 44% at 50% 46%, rgba(255, 252, 240, 0) 34%, rgba(255, 252, 238, .8) 66%, rgba(255, 255, 250, .97) 92%); animation: cblind 4s ease-in-out infinite; }
-@keyframes cblind { 50% { transform: scale(.93); filter: brightness(1.08); } }
-.frame.cf-blinded .edge, .frame.cf-blinded .corner { filter: brightness(1.5) saturate(.6) drop-shadow(0 0 10px rgba(255, 250, 230, .95)); }
+/* BLINDED — darkness closing in from the edges, centre stays clear */
+.cblind { position: absolute; inset: -8%; background: radial-gradient(ellipse 46% 44% at 50% 46%, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, .8) 66%, rgba(0, 0, 0, .96) 92%); animation: cblind 4s ease-in-out infinite; }
+@keyframes cblind { 50% { transform: scale(.93); } }
+.frame.cf-blinded .edge, .frame.cf-blinded .corner { filter: brightness(.6); }
 
 /* INVISIBLE — heat-haze shimmer on a cold, pale frame (still fully solid) */
 .frame.cf-invisible .edge, .frame.cf-invisible .corner { filter: url(#cx-haze) grayscale(.8) brightness(1.5) drop-shadow(0 0 8px rgba(190, 240, 255, .9)); }
