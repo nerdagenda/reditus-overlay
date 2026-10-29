@@ -114,7 +114,8 @@ window.REDITUS = {
       },
       "portrait": "assets/portraits/felix.jpg",
       "video": "assets/idle/felix.mp4?v=15",
-      "art": "assets/idle/felix.jpg?v=15"
+      "art": "assets/idle/felix.jpg?v=15",
+      "ddb": "https://www.dndbeyond.com/characters/172937623"
     },
     {
       "id": "jak",
