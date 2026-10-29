@@ -185,6 +185,17 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .lpmore .lpclr { margin-left: auto; }
 .lpadj { display: grid; gap: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
 .lpadj[hidden] { display: none; }
+.failsafe { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(2, 6, 18, .78); backdrop-filter: blur(3px); }
+.failsafe[hidden] { display: none; }
+.fsbox { width: min(760px, 92vw); background: var(--panel); border: 2px solid var(--gold-hi); box-shadow: 0 0 60px rgba(233, 185, 121, .35); padding: 34px 38px; text-align: center; animation: fsin .25s ease-out; }
+@keyframes fsin { from { transform: scale(.94); opacity: 0; } }
+.fskick { font-size: 16px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-hi); }
+.fsbox h2 { font-family: var(--display); font-size: 40px; line-height: 1.2; margin: 12px 0 28px; color: #fff; text-transform: none; letter-spacing: .01em; }
+.fsbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.fsbtns .btn { min-height: 96px; font-size: 30px; font-weight: 700; }
+.fsyes { background: linear-gradient(180deg, #2f6a3a, #143018); border-color: #8fe08f; color: #fff; }
+.fsno { background: linear-gradient(180deg, #c81e28, #6e0b13); border-color: #ff8a80; color: #fff; }
+.fshint { font-size: 17px; color: var(--muted); margin: 20px 0 0; }
 .obsbar { display: grid; grid-template-columns: minmax(230px, 280px) minmax(0, 1fr); gap: 14px; align-items: stretch; background: var(--panel); border: 1px solid var(--line); padding: 12px; margin-bottom: 14px; }
 .obsnow { display: grid; align-content: center; gap: 2px; padding: 4px 12px; border-left: 6px solid #c81e28; }
 .obsnow small { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -304,10 +315,8 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     <div class="talkgrid" id="talk-grid" role="group" aria-label="Pick two characters"></div>
     <div class="tpvhead"><button type="button" class="tpvtoggle" id="tpv-toggle" aria-expanded="true"><span class="chev">▾</span> <span id="tpv-label">Preview</span></button><button type="button" class="btn small" id="talk-swap">⇄ Swap sides</button></div>
     <div class="screen tthumb" id="tscreen"><iframe id="tpvu" title="Conversation preview, bottom layer" tabindex="-1"></iframe><iframe id="tpv" title="Conversation preview" tabindex="-1"></iframe></div>
-    <button type="button" class="btn big primary step" id="talk-apply"><i>1</i> Set up conversation screen</button>
-    <button type="button" class="btn big golive step" id="talk-live"><i>2</i> Go live to stream</button>
+    <button type="button" class="btn big primary step" id="talk-apply">Set up conversation screen</button>
     <div class="talkstate" id="talk-state"></div>
-    <button type="button" class="btn small backmain" id="talk-back">Back to main party scene</button>
     </div>
   </div>
  </div>
@@ -365,6 +374,17 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   <details><summary>Camera links (VDO.Ninja)</summary><div class="body">Each player has a permanent join link (on their card) and each "… Cam" source has a permanent view link ending in <code>#p=PASSWORD</code>. Set them once and never change them. Full details are in <b>Reditus_VDO_Ninja_Guide.pdf</b>.</div></details>
 </div>
 
+<div class="failsafe" id="failsafe" hidden role="alertdialog" aria-modal="true" aria-labelledby="fs-q">
+  <div class="fsbox">
+    <div class="fskick" id="fs-kick">Conversation scene · 5 minutes</div>
+    <h2 id="fs-q">Are they still having a conversation?</h2>
+    <div class="fsbtns">
+      <button type="button" class="btn fsyes" id="fs-yes">Yes, keep it</button>
+      <button type="button" class="btn fsno" id="fs-no">No · <span id="fs-count">15</span></button>
+    </div>
+    <p class="fshint" id="fs-hint">No answer in 15 seconds switches OBS back to the main party scene.</p>
+  </div>
+</div>
 <div class="wrap mode" id="mode-setup" hidden>
   <main>
     <div class="tabs" role="tablist">
@@ -1004,10 +1024,9 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var ready = !!(talkPick && talkPick.a && talkPick.b);
     var pend = ready && (!live || talkPick.a !== live.a || talkPick.b !== live.b);
     $("talk-apply").disabled = !pend;
-    $("talk-live").disabled = !(ready || (live && live.a && live.b));
     var mini = $("talk-mini"); if (mini) mini.textContent = live ? nameOf(live.a) + " & " + nameOf(live.b) : "";
     st.innerHTML = (live ? "Conversation screen: <b>" + esc(nameOf(live.a)) + "</b> &amp; <b>" + esc(nameOf(live.b)) + "</b>" : "Conversation screen not set up yet.") +
-      (talkPick && !ready ? '<br><span class="pend">Tap one more character.</span>' : pend ? '<br><span class="pend">Not set up yet: press 1, or 2 to set up and go live at once.</span>' : "");
+      (talkPick && !ready ? '<br><span class="pend">Tap one more character.</span>' : pend ? '<br><span class="pend">Not set up yet. Press Set up, then pick the conversation scene at the top.</span>' : "");
     // thumbnail: what the conversation screen will look like (the pick if there is one, otherwise what's set up now)
     var show = ready ? talkPick : live;
     var h = $("tpv-label").parentNode, sc = $("tscreen");
@@ -1036,16 +1055,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   $("talk-apply").addEventListener("click", function () {
     if (!talkPick || !talkPick.a || !talkPick.b) return;
     var t = { a: talkPick.a, b: talkPick.b };
-    sendState({ talk: t }).then(function (j) { if (j) { LIVE.talk = t; talkPick = null; paintTalk(); status("Conversation screen set up. Not on stream until you press Go live.", "good"); } });
-  });
-  $("talk-live").addEventListener("click", function () {
-    var ready = talkPick && talkPick.a && talkPick.b, t = ready ? { a: talkPick.a, b: talkPick.b } : LIVE.talk;
-    if (!t || !t.a || !t.b) return;
-    var body = { golive: { scene: "talk" } }; if (ready) body.talk = t;
-    sendState(body).then(function (j) { if (j) { LIVE.talk = t; talkPick = null; paintTalk(); status("Going live: OBS switches to the conversation scene in a few seconds.", "good"); } });
-  });
-  $("talk-back").addEventListener("click", function () {
-    sendState({ golive: { scene: "main" } }).then(function (j) { if (j) status("Going back: OBS switches to the main party scene in a few seconds.", "good"); });
+    sendState({ talk: t }).then(function (j) { if (j) { LIVE.talk = t; talkPick = null; paintTalk(); status("Conversation screen set up. Put it on stream with the scene buttons at the top.", "good"); } });
   });
 
   /* ---------- LIVE: collapsible panels (remembered on this computer) ---------- */
@@ -1147,6 +1157,53 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     }
     paintObsButtons();
   }
+  /* ---------- failsafe: conversation / spotlight left on stream ---------- */
+  var FS = { scene: "", since: 0, open: false, left: 0, tick: null, MIN: 5 * 60000, WAIT: 15 };
+  (function () { var t = +new URLSearchParams(location.search).get("failsafe"); if (t > 0) FS.MIN = t * 1000; })();   // testing: ?failsafe=SECONDS
+  function sceneKind(name) {
+    var o = LIVE.obs || {}, k = (o.kinds || {})[name];
+    if (k) return k;
+    var n = String(name || "").toLowerCase();   // OBS link not updated yet: guess from the name
+    return /conversation|convo|\btalk/.test(n) ? "talk" : /spotlight/.test(n) ? "spotlight" : /main|party/.test(n) ? "main" : "";
+  }
+  function mainScene() {
+    var o = LIVE.obs || {}, list = o.scenes || [];
+    return list.filter(function (n) { return (o.kinds || {})[n] === "main"; })[0] || list.filter(function (n) { return sceneKind(n) === "main"; })[0] || "";
+  }
+  function failsafeWatch() {
+    var o = LIVE.obs, fresh = o && !o.offline && o.current, cur = fresh ? o.current : "", k = sceneKind(cur), watch = k === "talk" || k === "spotlight";
+    if (cur !== FS.scene) { FS.scene = cur; FS.since = Date.now(); if (FS.open) closeFailsafe(); }
+    if (!watch || !mainScene()) { if (FS.open) closeFailsafe(); return; }
+    if (!FS.open && Date.now() - FS.since >= FS.MIN) openFailsafe(k);
+  }
+  function openFailsafe(k) {
+    FS.open = true; FS.left = FS.WAIT;
+    var mins = Math.round(FS.MIN / 60000);
+    $("fs-kick").textContent = (k === "talk" ? "Conversation" : "Spotlight") + " scene · " + mins + " minutes";
+    $("fs-q").textContent = k === "talk" ? "Are they still having a conversation?" : "Still spotlighting this character?";
+    $("fs-hint").textContent = "No answer in " + FS.WAIT + " seconds switches OBS back to " + mainScene() + ".";
+    $("fs-count").textContent = FS.left; $("failsafe").hidden = false; $("fs-yes").focus();
+    chime();
+    clearInterval(FS.tick);
+    FS.tick = setInterval(function () { FS.left--; $("fs-count").textContent = Math.max(0, FS.left); if (FS.left <= 0) failsafeNo(); }, 1000);
+  }
+  function closeFailsafe() { FS.open = false; clearInterval(FS.tick); $("failsafe").hidden = true; }
+  function failsafeNo() {
+    var m = mainScene(); closeFailsafe(); FS.since = Date.now();
+    if (!m) return;
+    sendState({ obscmd: { scene: m } }).then(function (j) { if (j) { OBS.going = m; OBS.goingAt = Date.now(); status("Switched back to " + m + ".", "good"); paintObs(); } });
+  }
+  $("fs-yes").addEventListener("click", function () { closeFailsafe(); FS.since = Date.now(); status("OK, the next check is in 5 minutes.", "good"); });
+  $("fs-no").addEventListener("click", failsafeNo);
+  addEventListener("keydown", function (e) { if (!FS.open) return; if (e.key === "Escape") { e.preventDefault(); $("fs-yes").click(); } });
+  setInterval(failsafeWatch, 1000);
+  function chime() {
+    try {
+      var A = window.AudioContext || window.webkitAudioContext; if (!A) return; var ac = chime.ac || (chime.ac = new A()), t = ac.currentTime;
+      [660, 880].forEach(function (f, i) { var o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; o.type = "sine"; g.gain.setValueAtTime(0, t + i * .18); g.gain.linearRampToValueAtTime(.18, t + i * .18 + .02); g.gain.exponentialRampToValueAtTime(.001, t + i * .18 + .5); o.connect(g).connect(ac.destination); o.start(t + i * .18); o.stop(t + i * .18 + .55); });
+    } catch (e) {}
+  }
+
   function paintObsButtons() {
     var o = LIVE.obs || {};
     Array.prototype.forEach.call(document.querySelectorAll(".oscene"), function (b) {

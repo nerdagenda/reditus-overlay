@@ -39,7 +39,9 @@ export default {
       if (body.obs && typeof body.obs === "object") {
         const nm = (v) => typeof v === "string" ? v.slice(0, 100) : "";
         const o = body.obs.offline ? { offline: true, t: Date.now() }
-          : { current: nm(body.obs.current), preview: nm(body.obs.preview), scenes: Array.isArray(body.obs.scenes) ? body.obs.scenes.slice(0, 60).map(nm).filter(Boolean) : [], t: Date.now() };
+          : { current: nm(body.obs.current), preview: nm(body.obs.preview), scenes: Array.isArray(body.obs.scenes) ? body.obs.scenes.slice(0, 60).map(nm).filter(Boolean) : [], kinds: {}, t: Date.now() };
+        // which overlay screen each scene shows (main, talk, spotlight…), so the control panel knows e.g. which scene is the conversation
+        if (o.scenes && body.obs.kinds && typeof body.obs.kinds === "object") o.scenes.forEach((n) => { const k = body.obs.kinds[n]; if (typeof k === "string" && /^[a-z]{2,12}$/.test(k)) o.kinds[n] = k; });
         await env.HP.put("obs", JSON.stringify(o));
         return json({ ok: true, obs: o });
       }

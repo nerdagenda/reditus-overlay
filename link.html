@@ -77,15 +77,35 @@
       current = r.currentProgramSceneName || current; preview = r.currentPreviewSceneName || "";
       // OBS lists scenes bottom-up; show them in the same order as the Scenes dock (top first)
       scenes = (r.scenes || []).slice().sort(function (a, b) { return b.sceneIndex - a.sceneIndex; }).map(function (s) { return s.sceneName; });
-      send();
+      return findKinds().then(function () { send(); }, function () { send(); });
     }).catch(function (e) { say(e.message, true); });
+  }
+  // which overlay screen (main, talk, spotlight, map, gm, intro, break) each scene shows, from its top-layer overlay's link
+  var kinds = {};
+  function findKinds() {
+    return call("GetInputList", { inputKind: "browser_source" }).then(function (r) {
+      var inputs = r.inputs || [];
+      return Promise.all(inputs.map(function (i) { return call("GetInputSettings", { inputName: i.inputName }).catch(function () { return {}; }); })).then(function (res) {
+        var byInput = {};
+        res.forEach(function (x, k) {
+          var u = ((x || {}).inputSettings || {}).url || "";
+          if (!/reditus-overlay|index\.html/i.test(u) || /layer=under/i.test(u) || /link\.html/i.test(u)) return;
+          byInput[inputs[k].inputName] = ((u.split("?")[1] || "").match(/(?:^|&)scene=([a-z]+)/i) || [, "main"])[1].toLowerCase();
+        });
+        return Promise.all(scenes.map(function (n) { return call("GetSceneItemList", { sceneName: n }).catch(function () { return {}; }); })).then(function (lists) {
+          var k2 = {};
+          lists.forEach(function (l, i) { ((l || {}).sceneItems || []).some(function (it) { if (byInput[it.sourceName]) { k2[scenes[i]] = byInput[it.sourceName]; return true; } }); });
+          kinds = k2;
+        });
+      });
+    });
   }
 
   // report to the relay (only when something changed, plus a check-in every 5 minutes)
   function send(force) {
     clearTimeout(sendTimer);
     sendTimer = setTimeout(function () {
-      var o = { current: current, preview: preview, scenes: scenes }, sig = JSON.stringify(o);
+      var o = { current: current, preview: preview, scenes: scenes, kinds: kinds }, sig = JSON.stringify(o);
       if (!force && sig === lastSent && Date.now() - lastSentAt < 290000) return;
       post({ obs: o }).then(function () { lastSent = sig; lastSentAt = Date.now(); say("connected · on stream: " + current); }).catch(function (e) { say("connected to OBS, but the relay said: " + e.message, true); });
     }, 400);
@@ -95,7 +115,7 @@
     return fetch(RELAY + "/state", { method: "POST", keepalive: !!keep, headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); });
   }
-  setInterval(function () { if (ready) send(); }, 300000);
+  setInterval(function () { if (ready) refresh(); }, 300000);
   addEventListener("pagehide", function () { try { post({ obs: { offline: true } }, true); } catch (e) {} });
 
   // commands from the control panel
