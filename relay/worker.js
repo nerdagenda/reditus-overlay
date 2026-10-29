@@ -12,7 +12,9 @@
      { "mapBars": false }                                 → bars on / off on the battle map only (default on)
      { "manual": { "felix": { "current": 40, "temp": 0 } } } → override one character's HP
      { "manual": { "felix": null } }                       → back to D&D Beyond
-   GET /hp also returns { battle, manual } so the overlay picks changes up on its next check. */
+     { "obscmd": { "scene": "Main Party" } }              → the OBS link (link.html in OBS) switches OBS to that scene
+     { "obs": { "current": "...", "scenes": [...] } }      → sent by the OBS link: what's on stream (stored under its own key)
+   GET /hp also returns { battle, manual, obs, obscmd } so the overlay, OBS link and control panel pick changes up on their next check. */
 
 const CACHE_SECONDS = 4;
 
@@ -33,7 +35,17 @@ export default {
       if (!env.HP) return json({ error: "no KV namespace bound as HP" }, 500);
       if (!env.ADMIN_KEY || req.headers.get("Authorization") !== "Bearer " + env.ADMIN_KEY) return json({ error: "wrong key" }, 401);
       let body; try { body = await req.json(); } catch (e) { return json({ error: "bad json" }, 400); }
+      // OBS link (link.html inside OBS) reporting what's on stream: kept under its own key so it never overwrites other changes
+      if (body.obs && typeof body.obs === "object") {
+        const nm = (v) => typeof v === "string" ? v.slice(0, 100) : "";
+        const o = body.obs.offline ? { offline: true, t: Date.now() }
+          : { current: nm(body.obs.current), preview: nm(body.obs.preview), scenes: Array.isArray(body.obs.scenes) ? body.obs.scenes.slice(0, 60).map(nm).filter(Boolean) : [], t: Date.now() };
+        await env.HP.put("obs", JSON.stringify(o));
+        return json({ ok: true, obs: o });
+      }
       const st = await readState(env);
+      // switch OBS to a scene by its exact name: { obscmd: { scene: "Main Party" } }
+      if (body.obscmd && typeof body.obscmd === "object" && typeof body.obscmd.scene === "string" && body.obscmd.scene) st.obscmd = { scene: body.obscmd.scene.slice(0, 100), id: Date.now() };
       if (typeof body.battle === "boolean") st.battle = body.battle;
       if (typeof body.mapBars === "boolean") st.mapBars = body.mapBars;
       // conversation scene pair: { talk: { a: "trey", b: "gm" } }
@@ -87,12 +99,13 @@ export default {
     const ids = [...new Set((url.searchParams.get("ids") || "").split(",").map((s) => s.trim()).filter((s) => /^\d{3,12}$/.test(s)))].slice(0, 12);
     const chars = {};
     const stP = env.HP ? readState(env) : Promise.resolve(null);
+    const obsP = env.HP ? env.HP.get("obs", { type: "json" }).catch(() => null) : Promise.resolve(null);
     await Promise.all(ids.map(async (id) => {
       try { chars[id] = await getChar(id, ctx, debug); }
       catch (e) { chars[id] = { error: String(e && e.message || e) }; }
     }));
-    const st = await stP;
-    return json({ t: Date.now(), battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, talk: st ? st.talk || null : null, golive: st ? st.golive || null : null, manual: st ? st.manual : {}, chars });
+    const st = await stP, obs = await obsP;
+    return json({ t: Date.now(), obs: obs || null, obscmd: st ? st.obscmd || null : null, battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, talk: st ? st.talk || null : null, golive: st ? st.golive || null : null, manual: st ? st.manual : {}, chars });
   },
 };
 

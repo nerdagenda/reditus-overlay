@@ -160,6 +160,23 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .btn.golive:hover:not(:disabled) { box-shadow: 0 0 18px rgba(255, 60, 60, .5); }
 .btn.step:disabled { opacity: .4; cursor: default; }
 .backmain { margin-top: 8px; }
+.obsbar { display: grid; grid-template-columns: minmax(230px, 280px) minmax(0, 1fr); gap: 14px; align-items: stretch; background: var(--panel); border: 1px solid var(--line); padding: 12px; margin-bottom: 14px; }
+.obsnow { display: grid; align-content: center; gap: 2px; padding: 4px 12px; border-left: 6px solid #c81e28; }
+.obsnow small { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.obsnow b { font-size: 26px; line-height: 1.15; color: #fff; overflow-wrap: anywhere; }
+.obsnow span { font-size: 14px; color: var(--muted); }
+.obsnow span.ok::before { content: "● "; color: #6ee07a; } .obsnow span.bad::before { content: "● "; color: #ff6b6b; }
+.obsbar.off .obsnow { border-left-color: #556; } .obsbar.off .obsnow b { color: var(--muted); }
+.obsscenes { display: flex; flex-wrap: wrap; gap: 8px; align-content: center; }
+.oscene { position: relative; min-height: 54px; padding: 10px 16px; font-size: 17px; background: var(--panel-2); border: 2px solid var(--line); color: var(--text); cursor: pointer; }
+.oscene:hover { border-color: var(--gold); }
+.oscene.on { background: linear-gradient(180deg, #c81e28, #6e0b13); border-color: #ff8a80; color: #fff; font-weight: 700; cursor: default; }
+.oscene.on::after { content: "LIVE"; margin-left: 10px; font-size: 11px; letter-spacing: .08em; background: #fff; color: #b3141e; padding: 2px 6px; vertical-align: 2px; }
+.oscene.pv { border-color: #6ee07a; }
+.oscene.armed { background: linear-gradient(180deg, #e9b979, #a8743a); color: #1c1205; border-color: var(--gold-hi); font-weight: 700; }
+.oscene.going { opacity: .7; }
+.obsscenes .none { font-size: 15px; color: var(--muted); line-height: 1.45; }
+.linkrow { display: flex; gap: 8px; } .linkrow input { flex: 1; min-width: 0; }
 .lp { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(318px, 1fr)); }
 .lpc { min-width: 0; position: relative; background: var(--panel); border: 1px solid var(--line); padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; }
 .lpc.picking { z-index: 5; border-color: var(--gold); }
@@ -261,6 +278,10 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   </div>
  </div>
   <div>
+    <div class="obsbar" id="obsbar">
+      <div class="obsnow"><small>On stream now</small><b id="obs-now">…</b><span id="obs-link">Checking OBS…</span></div>
+      <div class="obsscenes" id="obs-scenes" role="group" aria-label="OBS scenes"></div>
+    </div>
     <h2 style="margin:4px 0 10px">Party · HP &amp; conditions</h2>
     <div class="lp" id="live-party"></div>
   </div>
@@ -301,6 +322,12 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     <li>Every top-layer overlay link ends with <code>&amp;obs=YOURPASSWORD</code>.</li>
     <li>Camera sources are named exactly <code>Trey Cam</code>, <code>Darius Cam</code>, <code>GM Cam</code>… and added to each scene as <b>Existing</b> sources.</li>
     <li>Not working? Add <code>&amp;obsdebug=1</code> to the overlay link. A box in the corner says what's wrong.</li></ol></div></details>
+  <details><summary>OBS scene control (see and switch scenes from Live)</summary><div class="body"><ol>
+    <li>Setup → <b>Show &amp; GM</b> → <b>OBS link</b> → <b>Copy link</b>.</li>
+    <li>In OBS add a <b>Browser Source</b> called <b>OBS Link</b> to any scene, paste the link and replace <code>OBS_PASSWORD</code> with the OBS WebSocket password.</li>
+    <li><b>Untick “Shutdown source when not visible”</b>. You can hide it with the eye icon; it keeps working.</li>
+    <li>Live mode now shows <b>On stream now</b> and a button for every scene. Tap a scene <b>twice</b> to switch. The Stream Deck still works; the panel follows whatever is on stream.</li>
+    <li>Says “No word from OBS”? OBS is closed, or the OBS Link source was removed or has the wrong password (add <code>&amp;debug=1</code> to its link to see why).</li></ol></div></details>
   <details><summary>Camera links (VDO.Ninja)</summary><div class="body">Each player has a permanent join link (on their card) and each "… Cam" source has a permanent view link ending in <code>#p=PASSWORD</code>. Set them once and never change them. Full details are in <b>Reditus_VDO_Ninja_Guide.pdf</b>.</div></details>
 </div>
 
@@ -691,6 +718,25 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     h3.textContent = "Each player's D&D Beyond sheet must be set to Public. When they change HP on their sheet, the bar under their nameplate drains or fills within a few seconds, with a floating damage/heal number. Bars only appear for characters with a sheet link. Max HP comes from D&D Beyond; compare it with the Test results.";
     e.appendChild(h3);
     root.appendChild(e);
+
+    // OBS link (lets Live mode see and switch OBS scenes)
+    var o = document.createElement("div"); o.className = "card"; o.innerHTML = "<h3>OBS link (scene control from Live mode)</h3>";
+    var oh = document.createElement("p"); oh.className = "hint";
+    oh.innerHTML = "One extra Browser Source in OBS lets Live mode show <b>what's on stream</b> and <b>switch scenes</b> from here. The Stream Deck keeps working as normal. " +
+      "In OBS: add a Browser Source named <b>OBS Link</b> to any scene (size 300 × 60 is fine; you can hide it with the eye icon), paste the link below, replace <b>OBS_PASSWORD</b> with the OBS WebSocket password, and <b>untick “Shutdown source when not visible”</b> so it always runs.";
+    o.appendChild(oh);
+    var lr = document.createElement("div"); lr.className = "row linkrow";
+    var li = document.createElement("input"); li.type = "password"; li.readOnly = true; li.id = "obs-linkurl"; li.setAttribute("aria-label", "OBS link address");
+    var base = location.href.replace(/[?#].*$/, "").replace(/control\.html$/, "");
+    li.value = base + "link.html?obs=OBS_PASSWORD&key=" + (hpKey || "RELAY_KEY");
+    lr.appendChild(li);
+    lr.appendChild(btn("Show", function () { li.type = li.type === "password" ? "text" : "password"; this.textContent = li.type === "password" ? "Show" : "Hide"; }));
+    lr.appendChild(btn("Copy link", function () { var b = this; (navigator.clipboard ? navigator.clipboard.writeText(li.value) : Promise.reject()).then(function () { b.textContent = "Copied ✓"; setTimeout(function () { b.textContent = "Copy link"; }, 1500); }, function () { li.type = "text"; li.select(); }); }));
+    o.appendChild(lr);
+    var oh2 = document.createElement("p"); oh2.className = "hint";
+    oh2.textContent = (hpKey ? "The relay key is already filled in from this computer. " : "Enter the relay key above first, so it's filled into the link. ") + "The link holds the relay key, so keep it inside OBS. Add &debug=1 to the end to see a small status box while testing.";
+    o.appendChild(oh2);
+    root.appendChild(o);
   }
 
   /* ---------- Battle / HP (talks to the relay directly: changes show on stream within seconds, no Publish needed) ---------- */
@@ -722,6 +768,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       LIVE.chars = j.chars || {}; LIVE.battle = typeof j.battle === "boolean" ? j.battle : null; LIVE.mapBars = j.mapBars !== false;
       LIVE.conditions = Object.assign({}, j.conditions || {}, condPending);
       LIVE.talk = j.talk && j.talk.a ? j.talk : null; LIVE.seen = Date.now(); paintTalk();
+      LIVE.obs = j.obs || null; LIVE.serverT = j.t || 0; paintObs();
       // keep values we're still sending, so the numbers don't jump back while a click is in flight
       LIVE.manual = Object.assign({}, j.manual || {}, hpPending);
       hpErr = LIVE.battle === null ? "The relay has no storage yet (KV not bound), so battle mode and manual HP can't be saved." : "";
@@ -948,6 +995,59 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   $("talk-back").addEventListener("click", function () {
     sendState({ golive: { scene: "main" } }).then(function (j) { if (j) status("Going back: OBS switches to the main party scene in a few seconds.", "good"); });
   });
+
+  /* ---------- LIVE: OBS scenes (through the OBS link page running inside OBS) ---------- */
+  var OBS = { armed: null, armTimer: null, going: null, goingAt: 0, sig: "" };
+  function ago(ms) { var s = Math.round(ms / 1000); return s < 90 ? s + " s ago" : Math.round(s / 60) + " min ago"; }
+  function paintObs() {
+    var o = LIVE.obs, now = Date.now(), bar = $("obsbar"); if (!bar) return;
+    var fresh = o && !o.offline && o.t && (LIVE.serverT || now) - o.t < 6.5 * 60000;
+    if (OBS.going && o && o.current === OBS.going) { status("On stream now: " + OBS.going, "good"); OBS.going = null; }
+    if (OBS.going && now - OBS.goingAt > 15000) { status("OBS didn't switch to " + OBS.going + ". Is OBS open with the OBS link running?", "bad"); OBS.going = null; }
+    bar.classList.toggle("off", !fresh);
+    $("obs-now").textContent = OBS.going ? "→ " + OBS.going : o && o.current && !o.offline ? o.current : "Unknown";
+    var ln = $("obs-link");
+    if (!LIVE.seen) { ln.className = ""; ln.textContent = "Checking OBS…"; }
+    else if (!o) { ln.className = "bad"; ln.textContent = "OBS link not set up (Help → OBS scene control)"; }
+    else if (o.offline) { ln.className = "bad"; ln.textContent = "OBS closed " + ago((LIVE.serverT || now) - o.t); }
+    else if (!fresh) { ln.className = "bad"; ln.textContent = "No word from OBS since " + ago((LIVE.serverT || now) - o.t); }
+    else { ln.className = "ok"; ln.textContent = OBS.going ? "Switching…" : "OBS connected"; }
+    var list = (o && o.scenes) || [], wrap = $("obs-scenes");
+    var sig = list.join("\u0001") + "|" + !!fresh;
+    if (sig !== OBS.sig) {
+      OBS.sig = sig; wrap.innerHTML = "";
+      if (!list.length || !fresh) {
+        var n = document.createElement("div"); n.className = "none";
+        n.textContent = !o ? "Add the OBS link to OBS once (Setup → Show & GM → OBS link) to see and switch scenes here." : "Scene buttons come back when OBS is open with the OBS link running.";
+        wrap.appendChild(n);
+      }
+      if (fresh) list.forEach(function (name) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "oscene"; b.setAttribute("data-scene", name); b.textContent = name;
+        b.addEventListener("click", function () {
+          var cur = LIVE.obs && LIVE.obs.current;
+          if (name === cur && !OBS.going) return;
+          // two taps to switch, so a stray tap never changes the stream
+          if (OBS.armed !== name) { OBS.armed = name; clearTimeout(OBS.armTimer); OBS.armTimer = setTimeout(function () { OBS.armed = null; paintObsButtons(); }, 3000); paintObsButtons(); return; }
+          OBS.armed = null; clearTimeout(OBS.armTimer);
+          sendState({ obscmd: { scene: name } }).then(function (j) { if (j) { OBS.going = name; OBS.goingAt = Date.now(); status("Switching OBS to " + name + "…", "good"); paintObs(); } });
+        });
+        wrap.appendChild(b);
+      });
+    }
+    paintObsButtons();
+  }
+  function paintObsButtons() {
+    var o = LIVE.obs || {};
+    Array.prototype.forEach.call(document.querySelectorAll(".oscene"), function (b) {
+      var n = b.getAttribute("data-scene");
+      b.classList.toggle("on", n === o.current);
+      b.classList.toggle("pv", !!o.preview && n === o.preview && n !== o.current);
+      b.classList.toggle("armed", n === OBS.armed);
+      b.classList.toggle("going", n === OBS.going);
+      b.textContent = n === OBS.armed ? "Tap again → " + n : n;
+      b.title = n === o.current ? "On stream now" : "Tap twice to put this scene on stream";
+    });
+  }
 
   /* ---------- modes ---------- */
   var MODE = "live";

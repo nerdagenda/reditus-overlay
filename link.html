@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reditus OBS Link</title>
+<style>
+  html, body { margin: 0; background: transparent; }
+  #box { display: none; position: fixed; left: 8px; top: 8px; font: 14px/1.4 Arial, sans-serif; color: #fff; background: rgba(0,0,0,.78); padding: 8px 11px; border: 1px solid #e9b979; max-width: 640px; }
+  body.show #box { display: block; }
+</style>
+</head>
+<body>
+<div id="box">OBS link: starting…</div>
+<script src="data.js?t=1" onerror="window.REDITUS = window.REDITUS || {}"></script>
+<script>
+/* The Reditus Campaign — OBS link.
+   One browser source in OBS (any scene; untick "Shutdown source when not visible") runs this page. It:
+     • tells the control panel which scene is on stream, every time it changes (Stream Deck, mouse, anything)
+     • switches OBS when the control panel asks (Live → OBS scenes, or "Go live to stream")
+   URL:  link.html?obs=OBS_WEBSOCKET_PASSWORD&key=RELAY_KEY      (&debug=1 shows a status box)
+   Both secrets stay inside OBS. The OBS password is only used on this computer; the relay key only to talk to the relay. */
+(function () {
+  "use strict";
+  var q = new URLSearchParams(location.search);
+  var PASS = q.get("obs") || "", KEY = q.get("key") || "", PORT = +(q.get("obsport") || 4455);
+  var RELAY = (q.get("relay") || ((window.REDITUS || {}).hpRelay || {}).url || "https://reditus-hp.cory-b7e.workers.dev").replace(/\/+$/, "");
+  if (q.get("debug") === "1") document.body.classList.add("show");
+  var box = document.getElementById("box");
+  function say(t, bad) { box.textContent = "OBS link: " + t; box.style.borderColor = bad ? "#ff6a5e" : "#e9b979"; if (window.console) console[bad ? "warn" : "log"]("[Reditus link] " + t); }
+
+  var ws = null, ready = false, reqN = 0, pending = {}, retry = null;
+  var current = "", preview = "", scenes = [], lastSent = "", lastSentAt = 0, sendTimer = null;
+  function b64(buf) { var s = "", b = new Uint8Array(buf); for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
+  function sha(str) { return crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)).then(b64); }
+
+  function connect() {
+    clearTimeout(retry);
+    try { ws = new WebSocket("ws://127.0.0.1:" + PORT); } catch (e) { say("can't open a connection to OBS", true); return later(); }
+    ws.onmessage = function (ev) {
+      var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.op === 0) {
+        var a = m.d && m.d.authentication;
+        // eventSubscriptions 4 = scene events (program scene changed, scenes added/removed/renamed); 32 = UI (studio mode)
+        var ident = function (auth) { ws.send(JSON.stringify({ op: 1, d: { rpcVersion: 1, authentication: auth, eventSubscriptions: 4 | 1024 } })); };
+        if (a) sha(PASS + a.salt).then(function (s) { return sha(s + a.challenge); }).then(ident); else ident(undefined);
+      } else if (m.op === 2) {
+        ready = true; say("connected to OBS"); refresh();
+      } else if (m.op === 5) {
+        var t = m.d.eventType, d = m.d.eventData || {};
+        if (t === "CurrentProgramSceneChanged") { current = d.sceneName || current; send(); }
+        else if (t === "CurrentPreviewSceneChanged") { preview = d.sceneName || ""; send(); }
+        else if (/^Scene(Created|Removed|NameChanged|ListChanged)$/.test(t)) refresh();
+      } else if (m.op === 7) {
+        var p = pending[m.d.requestId]; if (!p) return; delete pending[m.d.requestId];
+        if (m.d.requestStatus && m.d.requestStatus.result) p.ok(m.d.responseData || {}); else p.bad(new Error((m.d.requestStatus && m.d.requestStatus.comment) || "request failed"));
+      }
+    };
+    ws.onclose = function (ev) {
+      ready = false;
+      say(ev.code === 4009 ? "wrong OBS WebSocket password (the obs= part of this link)" : "not connected to OBS (Tools → WebSocket Server Settings → Enable) — retrying", true);
+      later();
+    };
+    ws.onerror = function () {};
+  }
+  function later() { clearTimeout(retry); retry = setTimeout(connect, 5000); }
+  function call(type, data) {
+    return new Promise(function (ok, bad) {
+      if (!ready) return bad(new Error("not connected to OBS"));
+      var id = "r" + (++reqN); pending[id] = { ok: ok, bad: bad };
+      ws.send(JSON.stringify({ op: 6, d: { requestType: type, requestId: id, requestData: data || {} } }));
+      setTimeout(function () { if (pending[id]) { delete pending[id]; bad(new Error(type + " timed out")); } }, 8000);
+    });
+  }
+  function refresh() {
+    call("GetSceneList").then(function (r) {
+      current = r.currentProgramSceneName || current; preview = r.currentPreviewSceneName || "";
+      // OBS lists scenes bottom-up; show them in the same order as the Scenes dock (top first)
+      scenes = (r.scenes || []).slice().sort(function (a, b) { return b.sceneIndex - a.sceneIndex; }).map(function (s) { return s.sceneName; });
+      send();
+    }).catch(function (e) { say(e.message, true); });
+  }
+
+  // report to the relay (only when something changed, plus a check-in every 5 minutes)
+  function send(force) {
+    clearTimeout(sendTimer);
+    sendTimer = setTimeout(function () {
+      var o = { current: current, preview: preview, scenes: scenes }, sig = JSON.stringify(o);
+      if (!force && sig === lastSent && Date.now() - lastSentAt < 290000) return;
+      post({ obs: o }).then(function () { lastSent = sig; lastSentAt = Date.now(); say("connected · on stream: " + current); }).catch(function (e) { say("connected to OBS, but the relay said: " + e.message, true); });
+    }, 400);
+  }
+  function post(body, keep) {
+    if (!KEY) return Promise.reject(new Error("no relay key (add &key=… to this link)"));
+    return fetch(RELAY + "/state", { method: "POST", keepalive: !!keep, headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || r.status); return j; }); });
+  }
+  setInterval(function () { if (ready) send(); }, 300000);
+  addEventListener("pagehide", function () { try { post({ obs: { offline: true } }, true); } catch (e) {} });
+
+  // commands from the control panel
+  var seenCmd = null, seenLive = null;
+  function sceneForOverlay(key, focus) {
+    // the OBS scene holding the top-layer overlay for an overlay screen (talk, main, …)
+    return call("GetInputList", { inputKind: "browser_source" }).then(function (r) {
+      var inputs = r.inputs || [];
+      return Promise.all(inputs.map(function (i) { return call("GetInputSettings", { inputName: i.inputName }).catch(function () { return {}; }); })).then(function (res) {
+        var names = [];
+        res.forEach(function (x, k) {
+          var u = ((x || {}).inputSettings || {}).url || "";
+          if (!/reditus-overlay|index\.html/i.test(u) || /layer=under/i.test(u)) return;
+          var sc = ((u.split("?")[1] || "").match(/(?:^|&)scene=([^&]+)/) || [, "main"])[1].toLowerCase();
+          if (sc === key && (key !== "spotlight" || !focus || ((u.match(/focus=([^&]+)/) || [])[1] || "") === focus)) names.push(inputs[k].inputName);
+        });
+        if (!names.length) throw new Error("no “" + key + "” overlay found in OBS");
+        return Promise.all(scenes.map(function (n) { return call("GetSceneItemList", { sceneName: n }).catch(function () { return {}; }); })).then(function (lists) {
+          for (var i = 0; i < lists.length; i++) if (((lists[i] || {}).sceneItems || []).some(function (it) { return names.indexOf(it.sourceName) >= 0; })) return scenes[i];
+          throw new Error("no scene holds the “" + key + "” overlay");
+        });
+      });
+    });
+  }
+  function go(name) {
+    return call("SetCurrentProgramScene", { sceneName: name }).then(function () { say("switched to " + name); });
+  }
+  function poll() {
+    fetch(RELAY + "/hp?ids=&t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      var now = j.t || Date.now(), c = j.obscmd, g = j.golive;
+      if (seenCmd === null) { seenCmd = c ? c.id : 0; seenLive = g ? g.id : 0; return; }   // ignore anything sent before this page started
+      if (c && c.id !== seenCmd) { seenCmd = c.id; if (now - c.id < 30000) go(c.scene).catch(function (e) { say("couldn't switch to " + c.scene + ": " + e.message, true); }); }
+      if (g && g.id !== seenLive) { seenLive = g.id; if (now - g.id < 30000) sceneForOverlay(g.scene, g.focus).then(function (n) { if (n !== current) return go(n); }).catch(function (e) { say("go live: " + e.message, true); }); }
+    }).catch(function () {});
+  }
+  setInterval(poll, 2500); poll();
+  if (!PASS) say("add ?obs=YOUR_OBS_WEBSOCKET_PASSWORD to this link", true);
+  connect();
+})();
+</script>
+</body>
+</html>
