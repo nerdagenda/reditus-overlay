@@ -799,7 +799,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var g3 = document.createElement("div"); g3.className = "grid";
     g3.appendChild(field("HP relay address", R.url, function (v) { R.url = v.trim(); }, { id: "h-url" }));
     g3.appendChild(field("Check every (seconds)", R.seconds || 5, function (v) { R.seconds = v; }, { type: "number", min: 2, id: "h-sec" }));
-    g3.appendChild(field("Relay key (saved on this computer only)", hpKey, function (v) { hpKey = v.trim(); LS.set("reditus-hp-key", hpKey || null); paintBattle(); }, { id: "h-key", type: "password" }));
+    g3.appendChild(field("Relay key (saved on this computer only)", hpKey, function (v) { hpKey = v.trim(); LS.set("reditus-hp-key", hpKey || null); paintBattle(); var li2 = $("obs-linkurl"); if (li2) li2.value = li2.value.replace(/key=[^&]*$/, "key=" + (hpKey || "RELAY_KEY")); }, { id: "h-key", type: "password" }));
     e.appendChild(g3);
     var r3 = document.createElement("div"); r3.className = "row";
     r3.appendChild(check("Show HP bars on the camera windows", R.bars !== false, function (v) { R.bars = v; }, "h-bars"));
@@ -829,10 +829,11 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var lr = document.createElement("div"); lr.className = "row linkrow";
     var li = document.createElement("input"); li.type = "password"; li.readOnly = true; li.id = "obs-linkurl"; li.setAttribute("aria-label", "OBS link address");
     var base = location.href.replace(/[?#].*$/, "").replace(/control\.html$/, "");
-    li.value = base + "link.html?obs=OBS_PASSWORD&key=" + (hpKey || "RELAY_KEY");
+    var linkNow = function () { return base + "link.html?obs=OBS_PASSWORD&key=" + (hpKey || "RELAY_KEY"); };   // always the key saved right now
+    li.value = linkNow(); li.addEventListener("focus", function () { li.value = linkNow(); });
     lr.appendChild(li);
     lr.appendChild(btn("Show", function () { li.type = li.type === "password" ? "text" : "password"; this.textContent = li.type === "password" ? "Show" : "Hide"; }));
-    lr.appendChild(btn("Copy link", function () { var b = this; (navigator.clipboard ? navigator.clipboard.writeText(li.value) : Promise.reject()).then(function () { b.textContent = "Copied ✓"; setTimeout(function () { b.textContent = "Copy link"; }, 1500); }, function () { li.type = "text"; li.select(); }); }));
+    lr.appendChild(btn("Copy link", function () { var b = this; li.value = linkNow(); (navigator.clipboard ? navigator.clipboard.writeText(li.value) : Promise.reject()).then(function () { b.textContent = "Copied ✓"; setTimeout(function () { b.textContent = "Copy link"; }, 1500); }, function () { li.type = "text"; li.select(); }); }));
     o.appendChild(lr);
     var oh2 = document.createElement("p"); oh2.className = "hint";
     oh2.textContent = (hpKey ? "The relay key is already filled in from this computer. " : "Enter the relay key above first, so it's filled into the link. ") + "The link holds the relay key, so keep it inside OBS. Add &debug=1 to the end to see a small status box while testing.";
@@ -994,7 +995,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       if (!hpKey && relayUrl()) {
         var k = document.createElement("div"); k.className = "keyin";
         k.innerHTML = '<input type="password" id="live-key" placeholder="Relay key" autocomplete="off" aria-label="Relay key">';
-        var sv = btn("Save", function () { var v = $("live-key").value.trim(); if (!v) return; hpKey = v; LS.set("reditus-hp-key", v); k.remove(); paintBattle(); status("Relay key saved on this computer.", "good"); });
+        var sv = btn("Save", function () { var v = $("live-key").value.trim(); if (!v) return; hpKey = v; LS.set("reditus-hp-key", v); k.remove(); paintBattle(); var li2 = $("obs-linkurl"); if (li2) li2.value = li2.value.replace(/key=[^&]*$/, "key=" + v); status("Relay key saved on this computer.", "good"); });
         sv.classList.remove("small"); k.appendChild(sv); cn.appendChild(k);
       }
     }
