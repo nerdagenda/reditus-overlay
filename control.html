@@ -1292,7 +1292,6 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     $("fs-q").textContent = k === "talk" ? "Are they still having a conversation?" : "Still spotlighting this character?";
     $("fs-hint").textContent = "No answer in " + FS.WAIT + " seconds switches OBS back to " + mainScene() + ".";
     $("fs-count").textContent = FS.left; $("failsafe").hidden = false; $("fs-yes").focus();
-    chime();
     clearInterval(FS.tick);
     FS.tick = setInterval(function () { FS.left--; $("fs-count").textContent = Math.max(0, FS.left); if (FS.left <= 0) failsafeNo(); }, 1000);
   }
@@ -1306,12 +1305,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   $("fs-no").addEventListener("click", failsafeNo);
   addEventListener("keydown", function (e) { if (!FS.open) return; if (e.key === "Escape") { e.preventDefault(); $("fs-yes").click(); } });
   setInterval(failsafeWatch, 1000);
-  function chime() {
-    try {
-      var A = window.AudioContext || window.webkitAudioContext; if (!A) return; var ac = chime.ac || (chime.ac = new A()), t = ac.currentTime;
-      [660, 880].forEach(function (f, i) { var o = ac.createOscillator(), g = ac.createGain(); o.frequency.value = f; o.type = "sine"; g.gain.setValueAtTime(0, t + i * .18); g.gain.linearRampToValueAtTime(.18, t + i * .18 + .02); g.gain.exponentialRampToValueAtTime(.001, t + i * .18 + .5); o.connect(g).connect(ac.destination); o.start(t + i * .18); o.stop(t + i * .18 + .55); });
-    } catch (e) {}
-  }
+
 
   function paintObsButtons() {
     var o = LIVE.obs || {};
