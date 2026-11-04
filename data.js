@@ -74,23 +74,23 @@ window.REDITUS = {
       "seat": true,
       "mode": "cam",
       "ticker": true,
-      "level": 9,
+      "level": 11,
       "race": "Satyr",
       "cls": "Barbarian",
-      "ac": 17,
-      "hp": 86,
+      "ac": 19,
+      "hp": 104,
       "stats": {
-        "str": 14,
-        "dex": 18,
-        "con": 14,
+        "str": 21,
+        "dex": 20,
+        "con": 15,
         "int": 10,
-        "wis": 10,
-        "cha": 10
+        "wis": 8,
+        "cha": 12
       },
       "portrait": "assets/portraits/lapadis.jpg",
       "video": "assets/idle/lapadis.mp4?v=15",
       "art": "assets/idle/lapadis.jpg?v=15",
-      "ddb": "https://www.dndbeyond.com/characters/145147360"
+      "ddb": "https://www.dndbeyond.com/characters/166869659"
     },
     {
       "id": "felix",
