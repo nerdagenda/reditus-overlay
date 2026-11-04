@@ -557,7 +557,13 @@
     var out = [], i, r;
     if (tk.only) {
       var only = [].concat(tk.only);
-      return only.map(function (id) { return (D.party || []).filter(function (p) { return p.id === id; })[0]; }).filter(Boolean).map(function (p) { return { p: p }; });
+      var cards = only.map(function (id) { return (D.party || []).filter(function (p) { return p.id === id; })[0]; }).filter(Boolean).map(function (p) { return { p: p }; });
+      // conversation screen: the two speakers' cards, then a call-to-action, then the cards again, then the next call-to-action…
+      if (Array.isArray(tk.only) && msgs.length && cards.length) {
+        msgs.forEach(function (m) { cards.forEach(function (c) { out.push(c); }); out.push({ m: m }); });
+        return out;
+      }
+      return cards;
     }
     if (!t.pattern || t.pattern === "mix") {
       // default: a message, then `charactersBetween` character cards, then the next message… starting on a message
