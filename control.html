@@ -1055,7 +1055,8 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   /* ---------- LIVE: conversation picker (tap two characters, Apply) ---------- */
   var talkPick = null;
   function talkPeople() {
-    return S.party.map(function (p) { return { id: p.id, name: p.name || p.fullName, img: p.portrait }; }).concat([{ id: "gm", name: (S.gm && S.gm.label) || "Grand Master", gm: true }]);
+    // only characters whose camera window is on (the same people as the main party screen), plus the GM
+    return S.party.filter(function (p) { return p.seat !== false; }).map(function (p) { return { id: p.id, name: p.name || p.fullName, img: p.portrait }; }).concat([{ id: "gm", name: (S.gm && S.gm.label) || "Grand Master", gm: true }]);
   }
   function renderTalk() {
     var g = $("talk-grid"); if (!g) return; g.innerHTML = "";
