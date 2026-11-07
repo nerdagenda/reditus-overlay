@@ -190,7 +190,17 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 [data-mode="setup"] .live-only, [data-mode="help"] .live-only { display: none !important; }
 .arrange { display: inline-flex; gap: 6px; }
 .lmain { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-content: start; }
-.lmain > .obsbar, .rail > .obsbar { margin-bottom: 0; }
+.lmain > .obsbar, .rail > .tkopanel { border-color: #6e1218; }
+.tkopanel .phead h2 { color: #ff8a80; }
+.btn.tkoreveal { width: 100%; min-height: 64px; font-size: 21px; font-weight: 800; color: #fff; background: linear-gradient(180deg, #8d0a12, #3a0205); border-color: #ff5a4f; letter-spacing: .02em; }
+.btn.tkoreveal:hover:not(:disabled) { box-shadow: 0 0 22px rgba(255, 40, 40, .55); }
+.btn.tkoreveal.armed { background: linear-gradient(180deg, #ff3b30, #8d0a12); animation: tkoarm .6s ease-in-out infinite; }
+@keyframes tkoarm { 50% { box-shadow: 0 0 26px rgba(255, 60, 50, .8); } }
+.tkorow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.tkorow .btn { min-height: 46px; }
+.tkohint { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+.ytstate.tkoon { color: #fff; background: #8d0a12; padding: 3px 9px; letter-spacing: .08em; }
+.obsbar { margin-bottom: 0; }
 .live.flip { grid-template-columns: minmax(0, 1fr) minmax(380px, 470px); }
 .live.flip .rail { order: 2; }
 .rail .obsbar { grid-template-columns: minmax(0, 1fr); }
@@ -322,6 +332,14 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   <div class="switches dpanel" id="switches" data-panel="switches">
     <button type="button" class="switch" id="b-battle" aria-pressed="false"><b>⚔ Battle mode</b><span>Off · HP bars hidden</span></button>
     <button type="button" class="switch map" id="b-mapbars" aria-pressed="true"><b>🗺 Map HP bars</b><span>On · battle map screen only</span></button>
+  </div>
+  <div class="panel fold dpanel tkopanel" id="tko-panel" data-fold="tko" data-panel="tko">
+    <button type="button" class="phead" aria-expanded="true"><h2>Takeover</h2><span class="ytstate" id="tko-state">Off</span><span class="chev">▾</span></button>
+    <div class="pbody">
+      <button type="button" class="btn big tkoreveal" id="tko-reveal">🩸 Reveal the takeover</button>
+      <div class="tkorow"><button type="button" class="btn" id="tko-quiet">Turn on quietly</button><button type="button" class="btn" id="tko-end">End takeover</button></div>
+      <div class="tkohint" id="tko-hint">Reveal plays the glitch and blood-water wave on stream, then reskins every screen. The guest's camera takes the GM window and the DM's camera moves to Verris.</div>
+    </div>
   </div>
   <div class="panel fold dpanel" id="yt-panel" data-fold="yt" data-panel="yt">
     <button type="button" class="phead" aria-expanded="true"><h2>YouTube</h2><span class="ytstate" id="yt-state">Checking…</span><span class="chev">▾</span></button>
@@ -485,6 +503,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
   /* ---------- tooltips: every Setup field with a ? explains itself ---------- */
   var TIPS = {
+    "Guest GM nameplate": "The name on the GM window while a takeover is on (the guest GM's camera).",
     "Show HP numbers on the bars": "On: the bar shows “60 / 92”. Off: just the coloured bar, no numbers. Either way the frame pulses red when someone is under 15% HP.",
     "YouTube channel (live preview)": "The channel Live mode watches. A UC… channel id or an @handle. When it goes live, a muted preview of the stream pops up in Live mode.",
     "YouTube preview in Live mode": "Untick to hide the YouTube preview and stop checking whether the channel is live.",
@@ -736,6 +755,16 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function renderShow() {
     var root = $("s-show"); root.innerHTML = "";
     S.show = S.show || {}; S.gm = S.gm || {};
+    var tc = document.createElement("div"); tc.className = "card"; tc.innerHTML = "<h3>Takeover</h3>";
+    var tg = document.createElement("div"); tg.className = "grid2";
+    var T = function () { S.takeover = S.takeover || {}; return S.takeover; };
+    tg.appendChild(field("Guest GM nameplate", (S.takeover && S.takeover.gmLabel) || "Guest GM", function (v) { T().gmLabel = v; }, { id: "t-label" }));
+    tg.appendChild(field("DM plays during takeover", (S.takeover && S.takeover.dmAs) || "verris", function (v) { T().dmAs = v; }, { id: "t-as", options: S.party.map(function (p) { return [p.id, p.name || p.fullName]; }) }));
+    tc.appendChild(tg);
+    var th = document.createElement("p"); th.className = "hint";
+    th.innerHTML = "During a takeover the <b>Takeover Cam</b> source (the guest's camera) fills the GM window and <b>GM Cam</b> (the regular DM) moves to this character's seat. Start it from Live mode → Takeover.";
+    tc.appendChild(th); root.appendChild(tc);
+
     var c = document.createElement("div"); c.className = "card"; c.innerHTML = "<h3>Show</h3>";
     var g = document.createElement("div"); g.className = "grid";
     g.appendChild(field("Episode number", S.show.episode, function (v) { S.show.episode = v; }, { type: "number", min: 1, id: "s-ep" }));
@@ -850,6 +879,9 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       if (!FEATPEND) LIVE.featured = j.featured || {};
       LIVE.talk = j.talk && j.talk.a ? j.talk : null; LIVE.seen = Date.now(); paintTalk();
       LIVE.obs = j.obs || null; LIVE.serverT = j.t || 0; paintObs();
+      var tk = j.takeover || null, was = tkoOn();
+      LIVE.takeover = tk; if (tkoOn() !== was) { renderBattle(); paintBattle(); renderTalk(); }
+      paintTko();
       // keep values we're still sending, so the numbers don't jump back while a click is in flight
       LIVE.manual = Object.assign({}, j.manual || {}, hpPending);
       hpErr = LIVE.battle === null ? "The relay has no storage yet (KV not bound), so battle mode and manual HP can't be saved." : "";
@@ -913,7 +945,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function renderBattle() {
     var root = $("live-party"); if (!root) return; root.innerHTML = "";
     // only characters with a camera window on (Setup → Party → Camera window); Verris-style NPCs stay off this list
-    S.party.filter(function (p) { return p.seat !== false; }).forEach(function (p) {
+    S.party.filter(onCam).forEach(function (p) {
       var c = document.createElement("div"); c.className = "lpc"; c.setAttribute("data-pid", p.id);
       c.innerHTML = '<div class="lph"><img alt="" src="' + esc(p.portrait || "") + '"><div class="nm"><b title="' + esc(p.fullName || p.name) + '">' + esc(p.name || p.fullName) + '</b><small class="src"></small></div>' +
         '<div class="hpnum"><span class="cur">–</span><small> / <span class="max">–</span></small> <span class="tmp"></span></div></div>' +
@@ -1032,9 +1064,12 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 
   /* ---------- LIVE: conversation picker (tap two characters, Apply) ---------- */
   var talkPick = null;
+  // who is at the table: camera window on, plus the DM's own character while a takeover is on
+  function tkoOn() { return !!(LIVE.takeover && LIVE.takeover.on); }
+  function onCam(p) { return p.seat !== false || (tkoOn() && p.id === ((S.takeover && S.takeover.dmAs) || "verris")); }
   function talkPeople() {
     // only characters whose camera window is on (the same people as the main party screen), plus the GM
-    return S.party.filter(function (p) { return p.seat !== false; }).map(function (p) { return { id: p.id, name: p.name || p.fullName, img: p.portrait }; }).concat([{ id: "gm", name: (S.gm && S.gm.label) || "Grand Master", gm: true }]);
+    return S.party.filter(onCam).map(function (p) { return { id: p.id, name: p.name || p.fullName, img: p.portrait }; }).concat([{ id: "gm", name: tkoOn() ? ((S.takeover && S.takeover.gmLabel) || "Guest GM") : ((S.gm && S.gm.label) || "Grand Master"), gm: true }]);
   }
   function renderTalk() {
     var g = $("talk-grid"); if (!g) return; g.innerHTML = "";
@@ -1205,6 +1240,31 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   }
   setInterval(ytPoll, 60000);
 
+  /* ---------- LIVE: takeover (a guest GM takes over the stream) ---------- */
+  var TKARM = null;
+  function paintTko() {
+    var on = tkoOn(), st = $("tko-state");
+    st.textContent = on ? "ON" : "Off"; st.className = "ytstate" + (on ? " tkoon" : "");
+    $("tko-reveal").disabled = on; $("tko-quiet").disabled = on; $("tko-end").disabled = !on;
+    if (on) { $("tko-reveal").classList.remove("armed"); $("tko-reveal").textContent = "🩸 Takeover is on"; }
+    else if (!TKARM) $("tko-reveal").textContent = "🩸 Reveal the takeover";
+  }
+  $("tko-reveal").addEventListener("click", function () {
+    var b = this;
+    if (!TKARM) {   // two taps, so it can't go off by accident
+      b.classList.add("armed"); b.textContent = "Tap again to reveal it ON STREAM";
+      TKARM = setTimeout(function () { TKARM = null; b.classList.remove("armed"); paintTko(); }, 3500); return;
+    }
+    clearTimeout(TKARM); TKARM = null; b.classList.remove("armed");
+    sendState({ takeover: { on: true, reveal: true } }).then(function (j) { if (j) { LIVE.takeover = { on: true }; paintTko(); renderBattle(); paintBattle(); renderTalk(); status("Takeover revealed: the stream glitches and floods red within a few seconds.", "good"); } });
+  });
+  $("tko-quiet").addEventListener("click", function () {
+    sendState({ takeover: { on: true, reveal: false } }).then(function (j) { if (j) { LIVE.takeover = { on: true }; paintTko(); renderBattle(); paintBattle(); renderTalk(); status("Takeover on (no reveal).", "good"); } });
+  });
+  $("tko-end").addEventListener("click", function () {
+    sendState({ takeover: { on: false } }).then(function (j) { if (j) { LIVE.takeover = { on: false }; paintTko(); renderBattle(); paintBattle(); renderTalk(); status("Takeover ended: back to the normal look.", "good"); } });
+  });
+
   /* ---------- LIVE: OBS scenes (through the OBS link page running inside OBS) ---------- */
   var OBS = { armed: null, armTimer: null, going: null, goingAt: 0, sig: "" };
   function ago(ms) { var s = Math.round(ms / 1000); return s < 90 ? s + " s ago" : Math.round(s / 60) + " min ago"; }
@@ -1259,7 +1319,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   }
 
   /* ---------- LIVE: arrange panels (drag, only while Arrange is on; saved on this computer) ---------- */
-  var LAYOUT_DEF = { rail: ["conn", "switches", "yt", "talk"], main: ["obs", "party"], flip: false };
+  var LAYOUT_DEF = { rail: ["conn", "switches", "tko", "yt", "talk"], main: ["obs", "party"], flip: false };
   var ARR = { on: false, drag: null, line: null };
   function panelEl(id) { return document.querySelector('[data-panel="' + id + '"]'); }
   function zoneEl(z) { return document.querySelector('.dzone[data-zone="' + z + '"]'); }

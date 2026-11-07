@@ -42,7 +42,7 @@ export default {
           : { current: nm(body.obs.current), preview: nm(body.obs.preview), scenes: Array.isArray(body.obs.scenes) ? body.obs.scenes.slice(0, 60).map(nm).filter(Boolean) : [], kinds: {}, t: Date.now() };
         // which overlay screen each scene shows (main, talk, spotlight…), so the control panel knows e.g. which scene is the conversation
         if (o.scenes && body.obs.kinds && typeof body.obs.kinds === "object") o.scenes.forEach((n) => { const k = body.obs.kinds[n]; if (typeof k === "string" && /^[a-z]{2,12}$/.test(k)) o.kinds[n] = k; });
-        await env.HP.put("obs", JSON.stringify(o));
+        await kvPut(env, "obs", o);
         return json({ ok: true, obs: o });
       }
       const st = await readState(env);
@@ -69,6 +69,8 @@ export default {
           if (typeof v === "string" && /^[a-z]{2,24}$/.test(v)) st.featured[k] = v; else delete st.featured[k];
         });
       }
+      // takeover mode: { takeover: { on: true, reveal: true } } → every screen reskins (reveal = play the on-air reveal first)
+      if (body.takeover && typeof body.takeover === "object") st.takeover = { on: !!body.takeover.on, reveal: !!body.takeover.reveal, id: Date.now() };
       // manual conditions set by the DM: { conditions: { felix: ["banished", {id:"exhaustion",level:2}] } }  (null clears)
       if (body.conditions && typeof body.conditions === "object") {
         st.conditions = st.conditions || {};
@@ -88,7 +90,7 @@ export default {
         });
       }
       st.updated = Date.now();
-      await env.HP.put("state", JSON.stringify(st));
+      await kvPut(env, "state", st);
       return json({ ok: true, state: st });
     }
 
@@ -130,20 +132,35 @@ export default {
     const debug = url.searchParams.get("debug") === "1";
     const ids = [...new Set((url.searchParams.get("ids") || "").split(",").map((s) => s.trim()).filter((s) => /^\d{3,12}$/.test(s)))].slice(0, 12);
     const chars = {};
-    const stP = env.HP ? readState(env) : Promise.resolve(null);
-    const obsP = env.HP ? env.HP.get("obs", { type: "json" }).catch(() => null) : Promise.resolve(null);
+    const stP = env.HP ? readState(env, true) : Promise.resolve(null);
+    const obsP = env.HP ? kvGetCached(env, "obs") : Promise.resolve(null);
     await Promise.all(ids.map(async (id) => {
       try { chars[id] = await getChar(id, ctx, debug); }
       catch (e) { chars[id] = { error: String(e && e.message || e) }; }
     }));
     const st = await stP, obs = await obsP;
-    return json({ t: Date.now(), obs: obs || null, obscmd: st ? st.obscmd || null : null, battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, talk: st ? st.talk || null : null, golive: st ? st.golive || null : null, featured: st ? st.featured || {} : {}, manual: st ? st.manual : {}, chars });
+    return json({ t: Date.now(), obs: obs || null, obscmd: st ? st.obscmd || null : null, battle: st ? !!st.battle : null, mapBars: st ? st.mapBars !== false : null, conditions: st ? st.conditions || {} : {}, talk: st ? st.talk || null : null, golive: st ? st.golive || null : null, featured: st ? st.featured || {} : {}, takeover: st ? st.takeover || null : null, manual: st ? st.manual : {}, chars });
   },
 };
 
-async function readState(env) {
+// Many overlays ask for the same state every few seconds. Keep each value in the (free) edge cache for 3 s,
+// so they share one storage read instead of each using one. Writes refresh the cache straight away.
+const CACHE_TTL = 3;
+function cacheKey(k) { return new Request("https://reditus-relay-cache/" + k); }
+async function kvGetCached(env, k) {
+  try { const hit = await caches.default.match(cacheKey(k)); if (hit) return await hit.json(); } catch (e) {}
+  let v = null; try { v = await env.HP.get(k, { type: "json" }); } catch (e) {}
+  try { await caches.default.put(cacheKey(k), new Response(JSON.stringify(v), { headers: { "Content-Type": "application/json", "Cache-Control": "max-age=" + CACHE_TTL } })); } catch (e) {}
+  return v;
+}
+async function kvPut(env, k, v) {
+  await env.HP.put(k, JSON.stringify(v));
+  try { await caches.default.put(cacheKey(k), new Response(JSON.stringify(v), { headers: { "Content-Type": "application/json", "Cache-Control": "max-age=" + CACHE_TTL } })); } catch (e) {}
+}
+async function readState(env, cached) {
   let st = null;
-  try { st = await env.HP.get("state", { type: "json" }); } catch (e) {}
+  if (cached) st = await kvGetCached(env, "state");
+  else try { st = await env.HP.get("state", { type: "json" }); } catch (e) {}
   st = st || {};
   st.manual = st.manual || {};
   return st;

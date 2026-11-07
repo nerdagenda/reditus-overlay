@@ -316,3 +316,33 @@ body { width: 100vw; height: 100vh; }
 @keyframes stilldrift { 0% { transform: scale(1.02); background-position: 50% 28%; } 100% { transform: scale(1.09); background-position: 50% 34%; } }
 .frame .art.still { animation: stillpan 26s ease-in-out infinite alternate; }
 @keyframes stillpan { 0% { background-position: 50% 24%; } 100% { background-position: 50% 38%; } }
+
+/* ================= TAKEOVER (a guest GM takes over the stream) ================= */
+html.tko { --gold-hi: #ff8a7a; --gold: #d8281f; --gold-mid: #a1121a; --gold-lo: #4a0408; }
+html.tko #bg, html.tko .frame .edge, html.tko .frame .shine, html.tko .np, html.tko #ticker .box .corner { filter: url(#tkoblood); }
+html.tko .frame .corner { filter: url(#tkoblood) drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
+html.tko .frame .edge { animation: tkobreathe 5.5s ease-in-out infinite; }
+@keyframes tkobreathe { 0%, 100% { box-shadow: 0 0 0 0 rgba(200, 10, 20, 0); } 50% { box-shadow: 0 0 22px 2px rgba(200, 10, 20, .45); } }
+html.tko #ticker .bar { background: linear-gradient(100deg, #1f0507 0%, #0c0203 45%, #030000 100%); }
+html.tko #ticker .box { background: linear-gradient(135deg, #22070a 0%, #060101 100%); }
+html.tko .logo.reditus { background-image: url("../assets/logos/reditus-horizontal-takeover.png"); width: 372px !important; height: 280px !important; top: 786px !important; left: 128px !important;
+  filter: brightness(1.45) contrast(1.1) drop-shadow(0 0 16px rgba(210, 10, 25, .55)) drop-shadow(0 4px 10px rgba(0, 0, 0, .8)); }
+html.tko .intro-logo { background-image: url("../assets/logos/reditus-stacked-takeover.png"); }
+
+/* the reveal: glitch → static in the GM window → blood-water wave */
+html.tko-glitch #bg, html.tko-glitch #content, html.tko-glitch #ticker { animation: tkoglitch .22s steps(2, end) infinite; }
+@keyframes tkoglitch {
+  0% { transform: translate(0, 0); filter: none; }
+  20% { transform: translate(-9px, 3px) skewX(-2deg); filter: drop-shadow(7px 0 0 rgba(255, 0, 30, .8)) drop-shadow(-7px 0 0 rgba(0, 240, 255, .45)); }
+  40% { transform: translate(7px, -4px); filter: hue-rotate(-40deg) saturate(2.4) brightness(1.2); }
+  60% { transform: translate(-4px, 0) skewX(3deg); filter: drop-shadow(-9px 0 0 rgba(255, 0, 30, .85)) brightness(.8); }
+  80% { transform: translate(10px, 2px); filter: contrast(1.8) brightness(1.35); }
+  100% { transform: translate(0, 0); filter: none; }
+}
+.tko-scan { position: absolute; inset: 0; z-index: 40; pointer-events: none; mix-blend-mode: screen;
+  background: repeating-linear-gradient(0deg, rgba(255, 30, 40, .10) 0 2px, rgba(0, 0, 0, 0) 2px 5px);
+  animation: tkoscan .5s linear infinite, tkoflick .13s steps(2) infinite; }
+@keyframes tkoscan { to { background-position: 0 30px; } }
+@keyframes tkoflick { 50% { opacity: .35; } }
+.tko-static { position: absolute; z-index: 41; image-rendering: pixelated; pointer-events: none; }
+.tko-wave { position: absolute; z-index: 60; pointer-events: none; }

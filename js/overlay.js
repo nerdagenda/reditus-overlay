@@ -19,7 +19,8 @@
   var POLL_MS = +(q.get("poll") || 4000);
 
   var stage = document.getElementById("stage");
-  var D = null, BUILD = null, lastSig = "";
+  var D = null, RAW = null, BUILD = null, lastSig = "";
+  var TKO = null;   // takeover state from the relay: { on, reveal, id }
 
   /* ---------------- helpers ---------------- */
   function el(tag, cls, parent, style) {
@@ -50,7 +51,7 @@
       if (!d) return;
       if (BUILD != null && d.build !== BUILD) { location.reload(); return; }
       var sig = JSON.stringify(d);
-      if (sig !== lastSig) { lastSig = sig; D = d; render(); }
+      if (sig !== lastSig) { lastSig = sig; RAW = d; D = tkoData(d); render(); }
     });
   }
 
@@ -351,6 +352,101 @@
     return ids;
   }
   function hpCfg() { return (D && D.hpRelay) || {}; }
+
+  /* ---------------- TAKEOVER: a guest GM takes over the stream ----------------
+     Turned on from the control panel (Live → Takeover). While on:
+       • the guest's camera ("Takeover Cam" in OBS) sits in the GM window
+       • the regular DM's camera ("GM Cam") moves to his character's seat (Verris by default)
+       • every screen is reskinned blood red / black, with the TAKEOVER logo
+     "Reveal" plays the on-air moment first: glitch → static in the GM window → a wave of blood-water → new skin. */
+  function tkoCfg() { return (RAW && RAW.takeover) || {}; }
+  function tkoData(d) {
+    if (!d || !TKO || !TKO.on) return d;
+    var c = d.takeover || {}, x = JSON.parse(JSON.stringify(d)), as = c.dmAs || "verris";
+    x.gm = Object.assign({}, x.gm, { label: c.gmLabel || "Guest GM", cam: c.cam || "Takeover Cam", mode: "cam" });
+    (x.party || []).forEach(function (p) { if (p.id === as) { p.seat = true; p.mode = "cam"; p.cam = c.dmCam || "GM Cam"; } });
+    Object.keys(x.scenes || {}).forEach(function (k) { var o = x.scenes[k] && x.scenes[k].order; if (o && o.length && o.indexOf(as) < 0) o.push(as); });
+    return x;
+  }
+  var TKO_REVEALING = false;
+  function tkoUpdate(t, now) {
+    var was = TKO, sig = t ? t.on + "|" + t.id : "", wsig = was ? was.on + "|" + was.id : "";
+    if (sig === wsig) return;
+    TKO = t;
+    var fresh = t && t.reveal && t.on && was !== undefined && (now || Date.now()) - t.id < 30000 && tkoSeen;
+    tkoSeen = true;
+    if (fresh && !UNDER) { tkoReveal(); return; }
+    if (TKO_REVEALING) return;
+    tkoApply();
+  }
+  var tkoSeen = false;
+  function tkoApply() {
+    var on = !!(TKO && TKO.on);
+    document.documentElement.classList.toggle("tko", on);
+    if (RAW) { D = tkoData(RAW); render(); }
+  }
+  function tkoReveal() {
+    TKO_REVEALING = true;
+    var root = document.documentElement;
+    // 1 · the stream starts glitching
+    root.classList.add("tko-glitch");
+    var scan = el("div", "tko-scan", stage);
+    // 2 · seats swap under the glitch: OBS slides the guest's camera into the GM window, static crackles over it
+    setTimeout(function () {
+      D = tkoData(RAW); render();
+      var g = (layout().slots || []).filter(function (s) { return s.id === "gm"; })[0];
+      if (g) tkoStatic(g);
+    }, 700);
+    // 3 · a wave of blood-water floods the screen; at its peak the new skin is underneath
+    setTimeout(function () {
+      bloodWave(function () { root.classList.remove("tko-glitch"); scan.remove(); root.classList.add("tko"); render(); },
+                function () { TKO_REVEALING = false; });
+    }, 2300);
+  }
+  function tkoStatic(s) {
+    var c = document.createElement("canvas"); c.className = "tko-static"; c.width = 240; c.height = 135; stage.appendChild(c); place(c, s.x, s.y, s.w, s.h);
+    var x = c.getContext("2d"), img = x.createImageData(240, 135), t0 = performance.now();
+    (function tick(t) {
+      var k = (t - t0) / 1900; if (k >= 1) { c.remove(); return; }
+      var a = k < .35 ? 1 : 1 - (k - .35) / .65;
+      for (var i = 0; i < img.data.length; i += 4) { var v = Math.random() * 255, r = Math.random() < .08; img.data[i] = r ? 200 : v; img.data[i + 1] = r ? 0 : v * .9; img.data[i + 2] = r ? 10 : v * .9; img.data[i + 3] = 255 * a * (Math.random() < .9 ? 1 : .3); }
+      x.putImageData(img, 0, 0); requestAnimationFrame(tick);
+    })(t0);
+  }
+  // a full-screen wave of red water: floods down from the top, holds, then pours away off the bottom
+  function bloodWave(atPeak, done) {
+    var c = document.createElement("canvas"); c.className = "tko-wave"; c.width = 1920; c.height = 1080; stage.appendChild(c); place(c, 0, 0, 1920, 1080);
+    var x = c.getContext("2d"), t0 = performance.now(), FILL = 1500, HOLD = 450, DRAIN = 1900, peaked = false;
+    var drips = []; for (var i = 0; i < 34; i++) drips.push({ x: Math.random() * 1920, w: 6 + Math.random() * 16, len: 60 + Math.random() * 260, sp: .6 + Math.random() * .8 });
+    function edge(px, base, t) { return base + Math.sin(px * .006 + t * 2.1) * 26 + Math.sin(px * .017 - t * 3.3) * 12 + Math.sin(px * .0023 + t) * 34; }
+    function paint(top, bottom, t, dripsDown) {
+      var g = x.createLinearGradient(0, 0, 0, 1080); g.addColorStop(0, "#1a0002"); g.addColorStop(.45, "#5c0008"); g.addColorStop(.8, "#8d0a12"); g.addColorStop(1, "#3d0005");
+      x.fillStyle = g; x.beginPath();
+      x.moveTo(0, top == null ? -60 : edge(0, top, t));
+      for (var X = 0; X <= 1920; X += 24) x.lineTo(X, top == null ? -60 : edge(X, top, t + 1.7));
+      for (var X2 = 1920; X2 >= 0; X2 -= 24) x.lineTo(X2, bottom == null ? 1140 : edge(X2, bottom, t));
+      x.closePath(); x.fill();
+      // glossy rim on the leading edge
+      if (bottom != null) {
+        x.strokeStyle = "rgba(255,90,80,.55)"; x.lineWidth = 5; x.beginPath();
+        for (var X3 = 0; X3 <= 1920; X3 += 24) { var y = edge(X3, bottom, t) - 6; X3 ? x.lineTo(X3, y) : x.moveTo(X3, y); } x.stroke();
+        if (dripsDown) drips.forEach(function (d) {
+          var y0 = edge(d.x, bottom, t), L = d.len * d.sp * Math.min(1, (bottom + 200) / 600);
+          x.fillStyle = "#6e0009"; x.beginPath(); x.moveTo(d.x - d.w / 2, y0 - 4); x.lineTo(d.x + d.w / 2, y0 - 4); x.lineTo(d.x + d.w * .3, y0 + L);
+          x.arc(d.x, y0 + L, d.w * .45, 0, Math.PI); x.lineTo(d.x - d.w * .3, y0 + L); x.closePath(); x.fill();
+        });
+      }
+    }
+    function ease(k) { return k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; }
+    (function tick(now) {
+      var e = now - t0, t = e / 1000; x.clearRect(0, 0, 1920, 1080);
+      if (e < FILL) paint(null, -320 + ease(e / FILL) * 1560, t, true);
+      else if (e < FILL + HOLD) { paint(null, null, t, false); if (!peaked) { peaked = true; atPeak && atPeak(); } }
+      else if (e < FILL + HOLD + DRAIN) { var k = ease((e - FILL - HOLD) / DRAIN); paint(-80 + k * 1300, null, t, false); }
+      else { c.remove(); done && done(); return; }
+      requestAnimationFrame(tick);
+    })(t0);
+  }
   function battleOn() {
     if (SCENE === "map") return MAPBARS != null ? MAPBARS : hpCfg().mapBars !== false;
     return BATTLE != null ? BATTLE : !!hpCfg().battle;
@@ -417,11 +513,12 @@
   function hpTick() {
     var c = hpCfg();
     if (!c.url || !D || SCENE === "sampler") return;
-    if (UNDER && SCENE !== "talk") return;   // bottom layers only need the relay to know who is in the conversation
+    // bottom layers only need the relay for the conversation pair and the takeover (both change who sits where)
     var ids = UNDER ? [] : (D.party || []).map(ddbId).filter(Boolean);
     var u = c.url.replace(/\/+$/, "") + "/hp?ids=" + ids.join(",") + "&t=" + Date.now();
     return fetch(u, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       if (!j) return;
+      tkoUpdate(j.takeover || null, j.t);
       var nt = j.talk && j.talk.a ? j.talk : null;
       if (!TALKLOCK) { if (SCENE === "talk" && JSON.stringify(nt) !== JSON.stringify(TALK)) { TALK = nt; render(); } else TALK = nt; }
       if (UNDER) return;
@@ -520,6 +617,9 @@
   };
   var STAT_SHAPES = { str: "tri", dex: "sq", con: "d8", int: "d10", wis: "d12", cha: "d20" };
   var SHARED_DEFS = '<svg width="0" height="0" style="position:absolute"><defs>' +
+    // takeover skin: any gold / navy chrome → blacks and blood reds by brightness (camera feeds, art and HP bars are left alone)
+    '<filter id="tkoblood" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values=".3 .59 .11 0 0  .3 .59 .11 0 0  .3 .59 .11 0 0  0 0 0 1 0"/>' +
+    '<feComponentTransfer><feFuncR type="table" tableValues="0.02 0.16 0.42 0.74 0.95 1"/><feFuncG type="table" tableValues="0 0.02 0.05 0.12 0.36 0.72"/><feFuncB type="table" tableValues="0.01 0.03 0.06 0.12 0.32 0.66"/></feComponentTransfer></filter>' +
     '<radialGradient id="dieFill" cx="45%" cy="32%" r="75%"><stop offset="0" stop-color="#bfe6ff"/><stop offset=".25" stop-color="#4fa4ff"/><stop offset=".65" stop-color="#1d50d8"/><stop offset="1" stop-color="#0a1c78"/></radialGradient>' +
     '<linearGradient id="tileFill" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0d2a7a"/><stop offset="1" stop-color="#050d33"/></linearGradient>' +
     '<linearGradient id="shieldFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fd8ff"/><stop offset=".45" stop-color="#2f7fe6"/><stop offset="1" stop-color="#103b9a"/></linearGradient>' +
@@ -960,7 +1060,7 @@
     if (e.data && e.data.type === "reditus:talk" && e.data.talk) { TALK = e.data.talk; TALKLOCK = true; if (D) render(); }
     // live preview from the control panel (unsaved changes)
     if (e.data && e.data.type === "reditus:data" && e.data.data) {
-      LOCAL_PREVIEW = true; D = e.data.data; lastSig = JSON.stringify(D);
+      LOCAL_PREVIEW = true; RAW = e.data.data; D = tkoData(RAW); lastSig = JSON.stringify(RAW);
       if (BUILD == null) BUILD = D.build;
       render();
     }
@@ -976,10 +1076,11 @@
 
   /* ---------------- go ---------------- */
   loadData(function (d) {
-    if (!d) return; D = d; lastSig = JSON.stringify(d);
+    if (!d) return; RAW = d; D = tkoData(d); lastSig = JSON.stringify(d);
     var started = false, go = function () { if (started) return; started = true; render(); if (!UNDER) sheetTick(); setInterval(poll, POLL_MS); };
     // conversation screen: learn who is talking before the first draw, so it never flashes (or places cameras for) the wrong pair
-    if (SCENE === "talk" && hpCfg().url && !TALKLOCK) { var pr = hpTick(); setTimeout(go, 2500); if (pr && pr.then) pr.then(go, go); else go(); }
+    // learn the conversation pair and takeover state before the first draw, so a screen never flashes the wrong pair or the wrong skin
+    if (hpCfg().url && !TALKLOCK && SCENE !== "sampler" && !PREVIEW) { var pr = hpTick(); setTimeout(go, 2500); if (pr && pr.then) pr.then(go, go); else go(); }
     else { go(); hpTick(); }
   });
 })();
