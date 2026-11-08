@@ -114,6 +114,7 @@
       if (f) pSlot(f, { x: 660, y: 155, w: 896, h: 582 }, "l");
       // the spotlighted character's stat card sits under their window the whole time
       if (f) { L.ticker = true; L.tickerOnly = f.id; }
+      L.logos = true;
       var rest = party.filter(function (p) { return p !== f; });
       column(rest.length, 1649, 46, 224, 146, 224 / 146, 822, 17).forEach(function (r, i) { pSlot(rest[i], r, "s"); });
     } else if (SCENE === "talk") {
@@ -385,9 +386,20 @@
     document.documentElement.classList.toggle("tko", on);
     if (RAW) { D = tkoData(RAW); render(); }
   }
+  // the reveal's sound plays only from the overlay that is on stream (all the other scenes' overlays stay quiet)
+  var OBS_ACTIVE = null;
+  addEventListener("obsSourceActiveChanged", function (e) { OBS_ACTIVE = !!(e.detail && e.detail.active); });
+  function tkoSound() {
+    if (!window.ReditusTakeoverSound || q.get("sound") === "0") return;
+    if (q.get("sound") === "1") { window.ReditusTakeoverSound.play(); return; }
+    var go = function (onAir) { if (onAir) window.ReditusTakeoverSound.play(); };
+    if (window.ReditusOBS && window.ReditusOBS.isOnAir) window.ReditusOBS.isOnAir(function (r) { go(r === null ? OBS_ACTIVE === true : r); });
+    else go(OBS_ACTIVE === true);
+  }
   function tkoReveal() {
     TKO_REVEALING = true;
     var root = document.documentElement;
+    tkoSound();
     // 1 · the stream starts glitching
     root.classList.add("tko-glitch");
     var scan = el("div", "tko-scan", stage);
@@ -1013,8 +1025,10 @@
     cutOverlaps(frames, L.slots);
 
     if (L.logos) {
+      // logos sit just above the background: drawn first, so frames, nameplates and HP bars always cover them
       var lr = el("div", "logo reditus float", content); place(lr, 168, 876, 300, 158);
       var ld = el("div", "logo dd float", content); place(ld, 1700, 900, 175, 122); ld.style.animationDelay = "-3s";
+      content.insertBefore(ld, content.firstChild); content.insertBefore(lr, content.firstChild);
     }
     if (L.intro) {
       el("div", "intro-logo", content);

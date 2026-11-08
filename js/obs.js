@@ -12,7 +12,7 @@
   "use strict";
   var q = new URLSearchParams(location.search);
   var PASS = q.get("obs");
-  if (PASS == null) { window.ReditusOBS = { place: function () {}, switchTo: function () {} }; return; }
+  if (PASS == null) { window.ReditusOBS = { place: function () {}, switchTo: function () {}, isOnAir: function (cb) { cb(null); } }; return; }
   var PORT = +(q.get("obsport") || 4455), FIXED_SCENE = q.get("obsscene") || "", DEBUG = q.get("obsdebug") === "1";
   var ws = null, ready = false, reqN = 0, pending = {}, sceneName = FIXED_SCENE, canvasK = 1, lastSig = "", wanted = null, retry = null, stateMsg = "starting";
 
@@ -168,7 +168,14 @@
     }).catch(function (e) { delete FOUND[scene + "|" + (scene === "spotlight" ? focus || "" : "")]; say("couldn't go live: " + e.message, true); });
   }
 
+  // is this overlay's scene the one on stream right now? cb(true/false), or cb(null) when OBS can't be asked
+  function isOnAir(cb) {
+    if (!ready) return cb(null);
+    Promise.all([findScene(), call("GetCurrentProgramScene")]).then(function (r) { cb(r[0] === (r[1].currentProgramSceneName || r[1].sceneName)); }, function () { cb(null); });
+  }
+
   window.ReditusOBS = {
+    isOnAir: isOnAir,
     switchTo: switchTo,
     place: function (slots) { wanted = slots; apply(slots); },
     status: function () { return stateMsg; },

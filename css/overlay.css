@@ -325,8 +325,7 @@ html.tko .frame .edge { animation: tkobreathe 5.5s ease-in-out infinite; }
 @keyframes tkobreathe { 0%, 100% { box-shadow: 0 0 0 0 rgba(200, 10, 20, 0); } 50% { box-shadow: 0 0 22px 2px rgba(200, 10, 20, .45); } }
 html.tko #ticker .bar { background: linear-gradient(100deg, #1f0507 0%, #0c0203 45%, #030000 100%); }
 html.tko #ticker .box { background: linear-gradient(135deg, #22070a 0%, #060101 100%); }
-html.tko .logo.reditus { background-image: url("../assets/logos/reditus-horizontal-takeover.png"); width: 372px !important; height: 280px !important; top: 786px !important; left: 128px !important;
-  filter: brightness(1.45) contrast(1.1) drop-shadow(0 0 16px rgba(210, 10, 25, .55)) drop-shadow(0 4px 10px rgba(0, 0, 0, .8)); }
+html.tko .logo.reditus { background-image: url("../assets/logos/reditus-horizontal-takeover.png"); }
 html.tko .intro-logo { background-image: url("../assets/logos/reditus-stacked-takeover.png"); }
 
 /* the reveal: glitch → static in the GM window → blood-water wave */
