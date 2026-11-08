@@ -374,7 +374,7 @@
     var was = TKO, sig = t ? t.on + "|" + t.id : "", wsig = was ? was.on + "|" + was.id : "";
     if (sig === wsig) return;
     TKO = t;
-    var fresh = t && t.reveal && was !== undefined && (now || Date.now()) - t.id < 30000 && tkoSeen;
+    var fresh = t && t.reveal && was !== undefined && (now || Date.now()) - t.id < 10000 && tkoSeen;
     tkoSeen = true;
     if (fresh && !UNDER) { if (t.on) tkoReveal(); else tkoExit(); return; }
     if (TKO_REVEALING) return;
@@ -540,7 +540,7 @@
   }
   function hpTick() {
     var c = hpCfg();
-    if (!c.url || !D || SCENE === "sampler") return;
+    if (!c.url || !D || SCENE === "sampler" || q.get("relay") === "0") return;
     // bottom layers only need the relay for the conversation pair and the takeover (both change who sits where)
     var ids = UNDER ? [] : (D.party || []).map(ddbId).filter(Boolean);
     var u = c.url.replace(/\/+$/, "") + "/hp?ids=" + ids.join(",") + "&t=" + Date.now();
@@ -606,9 +606,27 @@
       if (sig !== SHEETSIG) { SHEETSIG = sig; render(); }
     });
   }
-  (function sheetLoop() { sheetTick(); setTimeout(sheetLoop, 60000); })();
+  /* Only the overlay that is actually showing talks to the relay (Cloudflare's free plan allows 100,000 requests a day).
+     Every scene's overlay stays loaded in OBS so scene switches are instant; the hidden ones pause their relay checks
+     and catch up the moment they're switched to. */
+  var NORELAY = q.get("relay") === "0";   // control-panel thumbnails: the panel sends them what they need
+  var ONAIR = !NORELAY, lastTick = 0;
+  function setOnAir(v) {
+    if (NORELAY) return;
+    var was = ONAIR; ONAIR = v;
+    if (v && !was) { hpTick(); if (!UNDER) sheetTick(); lastTick = Date.now(); }   // just switched to: catch up right away
+  }
+  addEventListener("obsSourceActiveChanged", function (e) { setOnAir(!!(e.detail && e.detail.active)); });
+  document.addEventListener("visibilitychange", function () { if (!window.obsstudio) setOnAir(!document.hidden); });
+  // top layers can ask OBS directly (local, free) whether their scene is the one on stream
+  setInterval(function () { if (window.ReditusOBS && window.ReditusOBS.isOnAir) window.ReditusOBS.isOnAir(function (r) { if (r !== null) setOnAir(r); }); }, 8000);
 
-  (function hpLoop() { hpTick(); setTimeout(hpLoop, Math.max(2, +(hpCfg().seconds || 4)) * 1000); })();
+  (function sheetLoop() { if (ONAIR) sheetTick(); setTimeout(sheetLoop, 60000); })();
+  (function hpLoop() {
+    var every = Math.max(2, +(hpCfg().seconds || 4)) * 1000 * (UNDER ? 3 : 1);   // bottom layers only need the conversation pair and the takeover
+    if (ONAIR) { hpTick(); lastTick = Date.now(); }
+    setTimeout(hpLoop, every);
+  })();
 
   // When a later window sits on top of an earlier frame (GM cam over the battle map), cut it out of the earlier frame.
   function cutOverlaps(frames, slots) {
@@ -1110,7 +1128,7 @@
     var started = false, go = function () { if (started) return; started = true; render(); if (!UNDER) sheetTick(); setInterval(poll, POLL_MS); };
     // conversation screen: learn who is talking before the first draw, so it never flashes (or places cameras for) the wrong pair
     // learn the conversation pair and takeover state before the first draw, so a screen never flashes the wrong pair or the wrong skin
-    if (hpCfg().url && !TALKLOCK && SCENE !== "sampler" && !PREVIEW) { var pr = hpTick(); setTimeout(go, 2500); if (pr && pr.then) pr.then(go, go); else go(); }
+    if (hpCfg().url && !TALKLOCK && SCENE !== "sampler" && !PREVIEW && q.get("relay") !== "0") { var pr = hpTick(); setTimeout(go, 2500); if (pr && pr.then) pr.then(go, go); else go(); }
     else { go(); hpTick(); }
   });
 })();

@@ -891,7 +891,10 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       paintBattle();
     }).catch(function () { hpErr = "Can't reach the relay."; paintBattle(); });
   }
-  setInterval(relayPoll, 3000);
+  // every 3 s while you're looking at it; every 30 s when the tab is in the background (saves the relay's daily allowance)
+  var relayLast = 0;
+  setInterval(function () { if (!document.hidden || Date.now() - relayLast > 30000) { relayLast = Date.now(); relayPoll(); } }, 3000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) { relayLast = Date.now(); relayPoll(); } });
   function sendState(body) {
     var u = relayUrl();
     if (!u) { status("Add the HP relay address first (Setup → Show & GM).", "bad"); return Promise.reject(); }
@@ -1125,7 +1128,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   var POPS = {}, POPLAST = {};
   function popUrl(id) {
     if (id === "setup") { var sc = $("pv-scene").value; return "preview.html?id=setup&scene=" + sc + (sc === "spotlight" ? "&focus=" + encodeURIComponent($("pv-focus").value || "") : "") + ($("pv-art").checked ? "&under=1" : ""); }
-    if (id === "talk") return "preview.html?id=talk&scene=talk&under=1";
+    if (id === "talk") return "preview.html?id=talk&scene=talk&under=1&relay=0";
     if (id === "yt") return "preview.html?id=yt&yt=" + encodeURIComponent(YT.live ? YT.videoId : "none");
   }
   function openPop(id) {
@@ -1171,7 +1174,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function talkShown() { var l = LIVE.talk; return talkPick && talkPick.a && talkPick.b ? talkPick : l; }
   function tpvLoad() {
     if (tpvLoaded) return; tpvLoaded = true;
-    var u = "index.html?scene=talk&t=" + Date.now();
+    var u = "index.html?scene=talk&relay=0&t=" + Date.now();
     var n = 0, onl = function () { if (++n < 2) return; setTimeout(function () { var l = LIVE.talk, t = talkPick && talkPick.a && talkPick.b ? talkPick : l; tpvSend(t, true); }, 300); };
     tpv.addEventListener("load", onl); tpvu.addEventListener("load", onl);
     tpvu.src = u + "&layer=under"; tpv.src = u; tfit();
@@ -1241,7 +1244,7 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
       box.insertBefore(m, box.firstChild);
     }
   }
-  setInterval(ytPoll, 60000);
+  setInterval(function () { if (!document.hidden) ytPoll(); }, 60000);
 
   /* ---------- LIVE: takeover (a guest GM takes over the stream) ---------- */
   var TKARM = null;

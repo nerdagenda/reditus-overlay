@@ -37,7 +37,7 @@
       document.body.appendChild(f);
     } else { var m = document.createElement("div"); m.className = "msg"; m.textContent = "Not live right now."; document.body.appendChild(m); }
   } else {
-    var sc = (q.get("scene") || "main").toLowerCase(), base = "index.html?scene=" + encodeURIComponent(sc) + (q.get("focus") ? "&focus=" + encodeURIComponent(q.get("focus")) : "") + "&t=" + Date.now();
+    var sc = (q.get("scene") || "main").toLowerCase(), base = "index.html?scene=" + encodeURIComponent(sc) + (q.get("focus") ? "&focus=" + encodeURIComponent(q.get("focus")) : "") + (q.get("relay") === "0" ? "&relay=0" : "") + "&t=" + Date.now();
     document.title = ({ talk: "Conversation", main: "Main party", spotlight: "Spotlight", map: "Battle map", gm: "GM screen", intro: "Intro", "break": "Break" }[sc] || sc) + " preview · Reditus";
     if (q.get("under") === "1") frames.push(add(base + "&layer=under"));
     frames.push(add(base));
