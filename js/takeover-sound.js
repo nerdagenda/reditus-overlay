@@ -11,7 +11,8 @@
     }
     var s = ctx.createBufferSource(); s.buffer = buf; return s;
   }
-  function build(ctx, dest, t0) {
+  function build(ctx, dest, t0, mode) {
+    var out = mode === "out";   // the exit: the drone rises back up (signal restored) instead of being dragged under
     t0 = t0 || ctx.currentTime;
     var master = ctx.createGain(); master.gain.value = .55;
     var comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 6;
@@ -28,8 +29,8 @@
     // 2 · warping drone: a detuned saw that bends down and wobbles, like the signal being pulled under
     var o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), lp = ctx.createBiquadFilter(), og = ctx.createGain(), lfo = ctx.createOscillator(), lfoG = ctx.createGain();
     o1.type = "sawtooth"; o2.type = "square"; lp.type = "lowpass"; lp.frequency.value = 1300; lp.Q.value = 6;
-    o1.frequency.setValueAtTime(240, t0); o1.frequency.exponentialRampToValueAtTime(48, t0 + 2.4);
-    o2.frequency.setValueAtTime(247, t0); o2.frequency.exponentialRampToValueAtTime(46, t0 + 2.4);
+    o1.frequency.setValueAtTime(out ? 48 : 240, t0); o1.frequency.exponentialRampToValueAtTime(out ? 260 : 48, t0 + 2.4);
+    o2.frequency.setValueAtTime(out ? 46 : 247, t0); o2.frequency.exponentialRampToValueAtTime(out ? 268 : 46, t0 + 2.4);
     lfo.frequency.setValueAtTime(5, t0); lfo.frequency.linearRampToValueAtTime(14, t0 + 2.2); lfoG.gain.value = 24;
     lfo.connect(lfoG); lfoG.connect(o1.frequency); lfoG.connect(o2.frequency);
     og.gain.setValueAtTime(0, t0); og.gain.linearRampToValueAtTime(.22, t0 + .25); og.gain.setValueAtTime(.22, t0 + 2.0); og.gain.exponentialRampToValueAtTime(.001, t0 + 2.6);
@@ -37,10 +38,10 @@
     [o1, o2, lfo].forEach(function (o) { o.start(t0); o.stop(t0 + 2.7); });
 
     // 3 · static burst as the guest's camera breaks into the GM window
-    var sb = noise(ctx, 2), hp = ctx.createBiquadFilter(), bg = ctx.createGain();
+    var sb = noise(ctx, 2), hp = ctx.createBiquadFilter(), bg = ctx.createGain(), sbAt = out ? 0 : .7;
     hp.type = "highpass"; hp.frequency.value = 1800;
-    bg.gain.setValueAtTime(0, t0 + .7); bg.gain.linearRampToValueAtTime(.5, t0 + .74); bg.gain.exponentialRampToValueAtTime(.02, t0 + 2.5);
-    sb.connect(hp).connect(bg).connect(master); sb.start(t0 + .7); sb.stop(t0 + 2.7);
+    bg.gain.setValueAtTime(0, t0 + sbAt); bg.gain.linearRampToValueAtTime(.5, t0 + sbAt + .04); bg.gain.exponentialRampToValueAtTime(.02, t0 + sbAt + 1.8);
+    sb.connect(hp).connect(bg).connect(master); sb.start(t0 + sbAt); sb.stop(t0 + sbAt + 2);
 
     // 4 · the wave: a rushing swell of water that floods in, crashes, then drains away
     var wv = noise(ctx, 4.2, "brown"), wl = ctx.createBiquadFilter(), wg = ctx.createGain(), T = t0 + 2.3;
@@ -55,8 +56,8 @@
     th.connect(tg).connect(master); th.start(T + 1.45); th.stop(T + 2.7);
     return 6.4;   // seconds
   }
-  function play() {
-    try { var A = window.AudioContext || window.webkitAudioContext; var ctx = new A(); if (ctx.state === "suspended") ctx.resume(); build(ctx, ctx.destination); setTimeout(function () { ctx.close(); }, 8000); } catch (e) {}
+  function play(mode) {
+    try { var A = window.AudioContext || window.webkitAudioContext; var ctx = new A(); if (ctx.state === "suspended") ctx.resume(); build(ctx, ctx.destination, 0, mode); setTimeout(function () { ctx.close(); }, 8000); } catch (e) {}
   }
   window.ReditusTakeoverSound = { build: build, play: play };
 })();

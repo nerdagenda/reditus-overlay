@@ -196,6 +196,8 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
 .btn.tkoreveal:hover:not(:disabled) { box-shadow: 0 0 22px rgba(255, 40, 40, .55); }
 .btn.tkoreveal.armed { background: linear-gradient(180deg, #ff3b30, #8d0a12); animation: tkoarm .6s ease-in-out infinite; }
 @keyframes tkoarm { 50% { box-shadow: 0 0 26px rgba(255, 60, 50, .8); } }
+.btn.tkoexit { margin-top: 8px; background: linear-gradient(180deg, #1f3a7a, #0b1a40); border-color: #e9b979; color: #ffe0a3; }
+.btn.tkoexit.armed { background: linear-gradient(180deg, #e9b979, #a8743a); color: #1c1205; }
 .tkorow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
 .tkorow .btn { min-height: 46px; }
 .tkohint { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.4; }
@@ -337,8 +339,9 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     <button type="button" class="phead" aria-expanded="true"><h2>Takeover</h2><span class="ytstate" id="tko-state">Off</span><span class="chev">▾</span></button>
     <div class="pbody">
       <button type="button" class="btn big tkoreveal" id="tko-reveal">🩸 Reveal the takeover</button>
-      <div class="tkorow"><button type="button" class="btn" id="tko-quiet">Turn on quietly</button><button type="button" class="btn" id="tko-end">End takeover</button></div>
-      <div class="tkohint" id="tko-hint">Reveal plays the glitch and blood-water wave on stream, then reskins every screen. The guest's camera takes the GM window and the DM's camera moves to Verris.</div>
+      <button type="button" class="btn big tkoreveal tkoexit" id="tko-end">✨ End the takeover</button>
+      <div class="tkorow"><button type="button" class="btn" id="tko-quiet">Turn on quietly</button><button type="button" class="btn" id="tko-endq">End quietly</button></div>
+      <div class="tkohint" id="tko-hint">Reveal plays the glitch, static, blood-water wave and sound on stream, then reskins every screen: the guest's camera takes the GM window and the DM's camera moves to Verris. End plays it in reverse and puts everything back. The quiet buttons switch instantly with no animation or sound.</div>
     </div>
   </div>
   <div class="panel fold dpanel" id="yt-panel" data-fold="yt" data-panel="yt">
@@ -1245,25 +1248,24 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
   function paintTko() {
     var on = tkoOn(), st = $("tko-state");
     st.textContent = on ? "ON" : "Off"; st.className = "ytstate" + (on ? " tkoon" : "");
-    $("tko-reveal").disabled = on; $("tko-quiet").disabled = on; $("tko-end").disabled = !on;
-    if (on) { $("tko-reveal").classList.remove("armed"); $("tko-reveal").textContent = "🩸 Takeover is on"; }
-    else if (!TKARM) $("tko-reveal").textContent = "🩸 Reveal the takeover";
+    $("tko-reveal").hidden = on; $("tko-quiet").disabled = on; $("tko-end").hidden = !on; $("tko-endq").disabled = !on;
+    if (!TKARM) { $("tko-reveal").textContent = "🩸 Reveal the takeover"; $("tko-end").textContent = "✨ End the takeover"; }
   }
-  $("tko-reveal").addEventListener("click", function () {
-    var b = this;
-    if (!TKARM) {   // two taps, so it can't go off by accident
-      b.classList.add("armed"); b.textContent = "Tap again to reveal it ON STREAM";
+  // two taps for the on-air moments, so they can't go off by accident
+  function armed(b, label, go) {
+    if (!TKARM) {
+      b.classList.add("armed"); b.textContent = label;
       TKARM = setTimeout(function () { TKARM = null; b.classList.remove("armed"); paintTko(); }, 3500); return;
     }
-    clearTimeout(TKARM); TKARM = null; b.classList.remove("armed");
-    sendState({ takeover: { on: true, reveal: true } }).then(function (j) { if (j) { LIVE.takeover = { on: true }; paintTko(); renderBattle(); paintBattle(); renderTalk(); status("Takeover revealed: the stream glitches and floods red within a few seconds.", "good"); } });
-  });
-  $("tko-quiet").addEventListener("click", function () {
-    sendState({ takeover: { on: true, reveal: false } }).then(function (j) { if (j) { LIVE.takeover = { on: true }; paintTko(); renderBattle(); paintBattle(); renderTalk(); status("Takeover on (no reveal).", "good"); } });
-  });
-  $("tko-end").addEventListener("click", function () {
-    sendState({ takeover: { on: false } }).then(function (j) { if (j) { LIVE.takeover = { on: false }; paintTko(); renderBattle(); paintBattle(); renderTalk(); status("Takeover ended: back to the normal look.", "good"); } });
-  });
+    clearTimeout(TKARM); TKARM = null; b.classList.remove("armed"); go();
+  }
+  function setTko(on, reveal, msg) {
+    sendState({ takeover: { on: on, reveal: reveal } }).then(function (j) { if (j) { LIVE.takeover = { on: on }; paintTko(); renderBattle(); paintBattle(); renderTalk(); status(msg, "good"); } });
+  }
+  $("tko-reveal").addEventListener("click", function () { armed(this, "Tap again to reveal it ON STREAM", function () { setTko(true, true, "Takeover revealed: the stream glitches and floods red within a few seconds."); }); });
+  $("tko-end").addEventListener("click", function () { armed(this, "Tap again to end it ON STREAM", function () { setTko(false, true, "Ending the takeover: the stream glitches and washes back to normal within a few seconds."); }); });
+  $("tko-quiet").addEventListener("click", function () { setTko(true, false, "Takeover on (no reveal)."); });
+  $("tko-endq").addEventListener("click", function () { setTko(false, false, "Takeover ended quietly: back to the normal look."); });
 
   /* ---------- LIVE: OBS scenes (through the OBS link page running inside OBS) ---------- */
   var OBS = { armed: null, armTimer: null, going: null, goingAt: 0, sig: "" };

@@ -374,9 +374,9 @@
     var was = TKO, sig = t ? t.on + "|" + t.id : "", wsig = was ? was.on + "|" + was.id : "";
     if (sig === wsig) return;
     TKO = t;
-    var fresh = t && t.reveal && t.on && was !== undefined && (now || Date.now()) - t.id < 30000 && tkoSeen;
+    var fresh = t && t.reveal && was !== undefined && (now || Date.now()) - t.id < 30000 && tkoSeen;
     tkoSeen = true;
-    if (fresh && !UNDER) { tkoReveal(); return; }
+    if (fresh && !UNDER) { if (t.on) tkoReveal(); else tkoExit(); return; }
     if (TKO_REVEALING) return;
     tkoApply();
   }
@@ -389,10 +389,10 @@
   // the reveal's sound plays only from the overlay that is on stream (all the other scenes' overlays stay quiet)
   var OBS_ACTIVE = null;
   addEventListener("obsSourceActiveChanged", function (e) { OBS_ACTIVE = !!(e.detail && e.detail.active); });
-  function tkoSound() {
+  function tkoSound(mode) {
     if (!window.ReditusTakeoverSound || q.get("sound") === "0") return;
-    if (q.get("sound") === "1") { window.ReditusTakeoverSound.play(); return; }
-    var go = function (onAir) { if (onAir) window.ReditusTakeoverSound.play(); };
+    if (q.get("sound") === "1") { window.ReditusTakeoverSound.play(mode); return; }
+    var go = function (onAir) { if (onAir) window.ReditusTakeoverSound.play(mode); };
     if (window.ReditusOBS && window.ReditusOBS.isOnAir) window.ReditusOBS.isOnAir(function (r) { go(r === null ? OBS_ACTIVE === true : r); });
     else go(OBS_ACTIVE === true);
   }
@@ -412,6 +412,22 @@
     // 3 · a wave of blood-water floods the screen; at its peak the new skin is underneath
     setTimeout(function () {
       bloodWave(function () { root.classList.remove("tko-glitch"); scan.remove(); root.classList.add("tko"); render(); },
+                function () { TKO_REVEALING = false; });
+    }, 2300);
+  }
+  // the exit: the stream glitches again, static eats the guest's camera while the DM slides back into the GM window,
+  // and the wave washes the blood away to reveal the normal gold-and-navy look, as if the guest was never there
+  function tkoExit() {
+    TKO_REVEALING = true;
+    var root = document.documentElement;
+    tkoSound("out");
+    root.classList.add("tko-glitch");
+    var scan = el("div", "tko-scan", stage);
+    var g0 = (layout().slots || []).filter(function (s) { return s.id === "gm"; })[0];
+    if (g0) tkoStatic(g0);
+    setTimeout(function () { D = tkoData(RAW); render(); }, 700);   // TKO is already off, so this is the normal seating
+    setTimeout(function () {
+      bloodWave(function () { root.classList.remove("tko-glitch"); scan.remove(); root.classList.remove("tko"); render(); },
                 function () { TKO_REVEALING = false; });
     }, 2300);
   }
