@@ -441,40 +441,123 @@
       x.putImageData(img, 0, 0); requestAnimationFrame(tick);
     })(t0);
   }
-  // a full-screen wave of red water: floods down from the top, holds, then pours away off the bottom
+  // a full-screen wave of blood-water: floods down from the top, holds, then pours away off the bottom.
+  // Layers: a lighter wave just ahead (depth) · the main body with churning marbled blood texture · darker depths ·
+  // a see-through leading edge · glossy rim with foam · shaded drips · drifting specks of light.
+  function liquidTex(W, H, seed) {
+    // tileable fractal noise, warped, mapped to a blood palette
+    var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    var x = cv.getContext("2d"), img = x.createImageData(W, H), d = img.data, G = 16, rnd = [], i, j;
+    var r = seed || 1; function rand() { r = (r * 16807) % 2147483647; return r / 2147483647; }
+    for (i = 0; i < G * G; i++) rnd.push(rand());
+    function vn(px, py, per) {   // periodic value noise
+      var x0 = Math.floor(px), y0 = Math.floor(py), fx = px - x0, fy = py - y0;
+      fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
+      function g(a, b) { a = ((a % per) + per) % per; b = ((b % per) + per) % per; return rnd[(a * 7 + b * 13) % (G * G)]; }
+      var A = g(x0, y0), B = g(x0 + 1, y0), C = g(x0, y0 + 1), D2 = g(x0 + 1, y0 + 1);
+      return A + (B - A) * fx + (C - A) * fy + (A - B - C + D2) * fx * fy;
+    }
+    function fbm(px, py) { var v = 0, amp = .5, f = 1; for (var o = 0; o < 5; o++) { v += amp * vn(px * f, py * f, 4 * f); amp *= .5; f *= 2; } return v; }
+    var stops = [[0, [8, 0, 1]], [.35, [40, 2, 5]], [.55, [92, 6, 12]], [.72, [140, 12, 20]], [.86, [190, 30, 34]], [1, [255, 120, 110]]];
+    for (j = 0; j < H; j++) for (i = 0; i < W; i++) {
+      var u = i / W * 4, v = j / H * 4;
+      var w1 = fbm(u + 1.7, v + 9.2), w2 = fbm(u + 8.3, v + 2.8);
+      var n = fbm(u + 2.2 * w1, v + 2.2 * w2);                 // domain-warped: swirling, marbled liquid
+      n = Math.min(1, Math.max(0, (n - .28) * 1.9));
+      n = Math.pow(n, 1.25);
+      for (var k = 1; k < stops.length && stops[k][0] < n; k++);
+      var s0 = stops[k - 1], s1 = stops[Math.min(k, stops.length - 1)], t = s1[0] === s0[0] ? 0 : (n - s0[0]) / (s1[0] - s0[0]), o4 = (j * W + i) * 4;
+      d[o4] = s0[1][0] + (s1[1][0] - s0[1][0]) * t; d[o4 + 1] = s0[1][1] + (s1[1][1] - s0[1][1]) * t; d[o4 + 2] = s0[1][2] + (s1[1][2] - s0[1][2]) * t; d[o4 + 3] = 255;
+    }
+    x.putImageData(img, 0, 0); return cv;
+  }
+  var LIQ = null;
   function bloodWave(atPeak, done) {
-    var c = document.createElement("canvas"); c.className = "tko-wave"; c.width = 1920; c.height = 1080; stage.appendChild(c); place(c, 0, 0, 1920, 1080);
+    if (!LIQ) LIQ = [liquidTex(320, 180, 7), liquidTex(320, 180, 31)];
+    // drawn at half resolution and scaled up (the liquid is soft, so it looks the same and costs a quarter as much)
+    var c = document.createElement("canvas"); c.className = "tko-wave"; c.width = 960; c.height = 540; stage.appendChild(c); place(c, 0, 0, 1920, 1080);
     var x = c.getContext("2d"), t0 = performance.now(), FILL = 1500, HOLD = 450, DRAIN = 1900, peaked = false;
-    var drips = []; for (var i = 0; i < 34; i++) drips.push({ x: Math.random() * 1920, w: 6 + Math.random() * 16, len: 60 + Math.random() * 260, sp: .6 + Math.random() * .8 });
+    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "low";
+    var pats = LIQ.map(function (cv) { return x.createPattern(cv, "repeat"); });
+    var drips = [], specks = [], foam = [];
+    for (var i = 0; i < 34; i++) drips.push({ x: Math.random() * 1920, w: 6 + Math.random() * 16, len: 60 + Math.random() * 260, sp: .6 + Math.random() * .8 });
+    for (i = 0; i < 90; i++) specks.push({ x: Math.random() * 1920, y: Math.random() * 1200, r: .8 + Math.random() * 2.6, v: 10 + Math.random() * 40, a: .15 + Math.random() * .35 });
+    for (i = 0; i < 70; i++) foam.push({ x: Math.random() * 1920, r: 2 + Math.random() * 7, o: Math.random() * 14 });
     function edge(px, base, t) { return base + Math.sin(px * .006 + t * 2.1) * 26 + Math.sin(px * .017 - t * 3.3) * 12 + Math.sin(px * .0023 + t) * 34; }
-    function paint(top, bottom, t, dripsDown) {
-      var g = x.createLinearGradient(0, 0, 0, 1080); g.addColorStop(0, "#1a0002"); g.addColorStop(.45, "#5c0008"); g.addColorStop(.8, "#8d0a12"); g.addColorStop(1, "#3d0005");
-      x.fillStyle = g; x.beginPath();
-      x.moveTo(0, top == null ? -60 : edge(0, top, t));
-      for (var X = 0; X <= 1920; X += 24) x.lineTo(X, top == null ? -60 : edge(X, top, t + 1.7));
-      for (var X2 = 1920; X2 >= 0; X2 -= 24) x.lineTo(X2, bottom == null ? 1140 : edge(X2, bottom, t));
-      x.closePath(); x.fill();
-      // glossy rim on the leading edge
+    function shape(top, bottom, t, lead) {
+      x.beginPath();
+      x.moveTo(0, top == null ? -60 : edge(0, top, t + 1.7));
+      for (var X = 0; X <= 1920; X += 20) x.lineTo(X, top == null ? -60 : edge(X, top, t + 1.7));
+      for (var X2 = 1920; X2 >= 0; X2 -= 20) x.lineTo(X2, bottom == null ? 1140 : edge(X2, bottom, t * (lead ? 1.25 : 1) + (lead ? 2.4 : 0)) + (lead || 0));
+      x.closePath();
+    }
+    function texture(t) {
+      // two marbled layers drifting at different speeds and scales: the liquid churns
+      var M = window.DOMMatrix ? function (sx, ox, oy) { return new DOMMatrix([sx, 0, 0, sx, ox, oy]); } : null;
+      pats[0].setTransform && M && pats[0].setTransform(M(7.5, t * 38, t * 64));
+      x.fillStyle = pats[0]; x.fillRect(0, 0, 1920, 1080);
+      x.globalCompositeOperation = "screen"; x.globalAlpha = .38;
+      pats[1].setTransform && M && pats[1].setTransform(M(5.2, -t * 52, t * 30));
+      x.fillStyle = pats[1]; x.fillRect(0, 0, 1920, 1080);
+      x.globalCompositeOperation = "source-over"; x.globalAlpha = 1;
+    }
+    function body(top, bottom, t) {
+      // lighter, see-through wave running just ahead of the main body: depth
       if (bottom != null) {
-        x.strokeStyle = "rgba(255,90,80,.55)"; x.lineWidth = 5; x.beginPath();
-        for (var X3 = 0; X3 <= 1920; X3 += 24) { var y = edge(X3, bottom, t) - 6; X3 ? x.lineTo(X3, y) : x.moveTo(X3, y); } x.stroke();
-        if (dripsDown) drips.forEach(function (d) {
-          var y0 = edge(d.x, bottom, t), L = d.len * d.sp * Math.min(1, (bottom + 200) / 600);
-          x.fillStyle = "#6e0009"; x.beginPath(); x.moveTo(d.x - d.w / 2, y0 - 4); x.lineTo(d.x + d.w / 2, y0 - 4); x.lineTo(d.x + d.w * .3, y0 + L);
-          x.arc(d.x, y0 + L, d.w * .45, 0, Math.PI); x.lineTo(d.x - d.w * .3, y0 + L); x.closePath(); x.fill();
-        });
+        x.save(); shape(top, bottom, t, 46); x.clip(); x.globalAlpha = .38; texture(t * .7 + 3); x.globalAlpha = 1;
+        x.fillStyle = "rgba(170,20,30,.25)"; x.fillRect(0, 0, 1920, 1080); x.restore();
       }
+      x.save(); shape(top, bottom, t, 0); x.clip();
+      texture(t);
+      // depth: darker the further from the surface
+      var surf = bottom == null ? 1080 : bottom, dg = x.createLinearGradient(0, surf - 900, 0, surf);
+      dg.addColorStop(0, "rgba(8,0,1,.72)"); dg.addColorStop(.7, "rgba(20,0,3,.25)"); dg.addColorStop(.93, "rgba(0,0,0,0)"); dg.addColorStop(1, "rgba(255,70,60,.18)");
+      x.fillStyle = dg; x.fillRect(0, 0, 1920, 1080);
+      if (top != null) { var tg = x.createLinearGradient(0, top - 40, 0, top + 260); tg.addColorStop(0, "rgba(255,90,80,.2)"); tg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = tg; x.fillRect(0, 0, 1920, 1080); }
+      // drifting specks of light suspended in the liquid
+      specks.forEach(function (p) {
+        var y = (p.y - t * p.v) % 1200; if (y < -20) y += 1220;
+        x.fillStyle = "rgba(255,170,150," + p.a + ")"; x.beginPath(); x.arc(p.x + Math.sin(t * 1.3 + p.y) * 8, y, p.r, 0, 7); x.fill();
+      });
+      x.restore();
+    }
+    function rim(bottom, t, dripsDown) {
+      // glossy highlight on the leading edge + foam bubbles + a soft shadow cast below it
+      var sh = x.createLinearGradient(0, bottom - 20, 0, bottom + 70); sh.addColorStop(0, "rgba(0,0,0,.35)"); sh.addColorStop(1, "rgba(0,0,0,0)");
+      x.save(); x.beginPath(); for (var X = 0; X <= 1920; X += 20) { var y0 = edge(X, bottom, t); X ? x.lineTo(X, y0) : x.moveTo(X, y0); }
+      x.lineTo(1920, bottom + 120); x.lineTo(0, bottom + 120); x.closePath(); x.fillStyle = sh; x.fill(); x.restore();
+      x.lineCap = "round";
+      x.strokeStyle = "rgba(255,120,110,.55)"; x.lineWidth = 6; x.beginPath();
+      for (X = 0; X <= 1920; X += 20) { var y = edge(X, bottom, t) - 7; X ? x.lineTo(X, y) : x.moveTo(X, y); } x.stroke();
+      x.strokeStyle = "rgba(255,225,215,.55)"; x.lineWidth = 2; x.beginPath();
+      for (X = 0; X <= 1920; X += 20) { var y2 = edge(X, bottom, t) - 11 + Math.sin(X * .05 + t * 6) * 1.5; X ? x.lineTo(X, y2) : x.moveTo(X, y2); } x.stroke();
+      foam.forEach(function (f) {
+        var fy = edge(f.x, bottom, t) - f.o; x.strokeStyle = "rgba(255,190,180,.45)"; x.lineWidth = 1.2; x.fillStyle = "rgba(120,10,16,.6)";
+        x.beginPath(); x.arc(f.x + Math.sin(t * 2 + f.o) * 3, fy, f.r * (.8 + .2 * Math.sin(t * 4 + f.x)), 0, 7); x.fill(); x.stroke();
+      });
+      if (dripsDown) drips.forEach(function (d) {
+        var y0 = edge(d.x, bottom, t), L = d.len * d.sp * Math.min(1, (bottom + 200) / 600);
+        var g = x.createLinearGradient(d.x - d.w / 2, 0, d.x + d.w / 2, 0); g.addColorStop(0, "#3d0006"); g.addColorStop(.35, "#8d0a14"); g.addColorStop(.55, "#c8303a"); g.addColorStop(1, "#4a0007");
+        x.fillStyle = g; x.beginPath(); x.moveTo(d.x - d.w / 2, y0 - 6); x.lineTo(d.x + d.w / 2, y0 - 6); x.lineTo(d.x + d.w * .3, y0 + L);
+        x.arc(d.x, y0 + L, d.w * .45, 0, Math.PI); x.lineTo(d.x - d.w * .3, y0 + L); x.closePath(); x.fill();
+        x.fillStyle = "rgba(255,200,190,.5)"; x.beginPath(); x.arc(d.x - d.w * .12, y0 + L - d.w * .1, d.w * .14, 0, 7); x.fill();
+      });
     }
     function ease(k) { return k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; }
     (function tick(now) {
-      var e = now - t0, t = e / 1000; x.clearRect(0, 0, 1920, 1080);
-      if (e < FILL) paint(null, -320 + ease(e / FILL) * 1560, t, true);
-      else if (e < FILL + HOLD) { paint(null, null, t, false); if (!peaked) { peaked = true; atPeak && atPeak(); } }
-      else if (e < FILL + HOLD + DRAIN) { var k = ease((e - FILL - HOLD) / DRAIN); paint(-80 + k * 1300, null, t, false); }
-      else { c.remove(); done && done(); return; }
+      var e = now - t0, t = e / 1000; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, 960, 540); x.setTransform(.5, 0, 0, .5, 0, 0);
+      if (e < FILL) { var b = -320 + ease(e / FILL) * 1560; body(null, b, t); rim(b, t, true); }
+      else if (e < FILL + HOLD) { body(null, null, t); if (!peaked) { peaked = true; atPeak && atPeak(); } }
+      else if (e < FILL + HOLD + DRAIN) {
+        if (!peaked) { peaked = true; atPeak && atPeak(); }   // a slow frame skipped the hold: switch the look now anyway
+        var k = ease((e - FILL - HOLD) / DRAIN), top = -80 + k * 1300; body(top, null, t);
+        // the trailing surface as it pours away: a thin glossy line
+        x.strokeStyle = "rgba(255,120,110,.4)"; x.lineWidth = 3; x.beginPath(); for (var X = 0; X <= 1920; X += 20) { var y = edge(X, top, t + 1.7) + 4; X ? x.lineTo(X, y) : x.moveTo(X, y); } x.stroke(); }
+      else { if (!peaked) { peaked = true; atPeak && atPeak(); } c.remove(); done && done(); return; }
       requestAnimationFrame(tick);
     })(t0);
   }
+
   function battleOn() {
     if (SCENE === "map") return MAPBARS != null ? MAPBARS : hpCfg().mapBars !== false;
     return BATTLE != null ? BATTLE : !!hpCfg().battle;
