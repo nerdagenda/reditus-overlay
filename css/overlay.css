@@ -344,4 +344,10 @@ html.tko-glitch #bg, html.tko-glitch #content, html.tko-glitch #ticker { animati
 @keyframes tkoscan { to { background-position: 0 30px; } }
 @keyframes tkoflick { 50% { opacity: .35; } }
 .tko-static { position: absolute; z-index: 41; image-rendering: pixelated; pointer-events: none; }
-.tko-wave { position: absolute; z-index: 60; pointer-events: none; }
+.tko-storm { position: absolute; z-index: 60; pointer-events: none; image-rendering: pixelated; }
+/* the guest's camera flickering over everything during the takeover reveal */
+.tko-cam { position: absolute; z-index: 61; pointer-events: none; opacity: 0; overflow: hidden; background: #000; will-change: transform, opacity; }
+.tko-cam iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: transparent; }
+.tko-cam .tint { position: absolute; inset: 0; background: #c0101c; mix-blend-mode: multiply; opacity: 0; }
+.tko-cam::after { content: ""; position: absolute; inset: 0; mix-blend-mode: overlay;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.14) 0 1px, rgba(0,0,0,.22) 1px 3px); }

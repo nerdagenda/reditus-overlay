@@ -359,7 +359,7 @@
        • the guest's camera ("Takeover Cam" in OBS) sits in the GM window
        • the regular DM's camera ("GM Cam") moves to his character's seat (Verris by default)
        • every screen is reskinned blood red / black, with the TAKEOVER logo
-     "Reveal" plays the on-air moment first: glitch → static in the GM window → a wave of blood-water → new skin. */
+     "Reveal" plays the on-air moment first: glitch → the guest's camera flickers through building static → white-out with red smoke → new skin. */
   function tkoCfg() { return (RAW && RAW.takeover) || {}; }
   function tkoData(d) {
     if (!d || !TKO_SHOWN) return d;   // the seating that's on screen now (changes only at the wave's peak)
@@ -414,67 +414,77 @@
   // the reveal's sound plays only from the overlay that is on stream (all the other scenes' overlays stay quiet)
   var OBS_ACTIVE = null;
   addEventListener("obsSourceActiveChanged", function (e) { OBS_ACTIVE = !!(e.detail && e.detail.active); });
-  function tkoSound(mode) {
+  // is this overlay the one on stream? (only that one plays sound and loads the guest's camera)
+  function tkoOnAir(cb) {
+    if (q.get("sound") === "1") return cb(true);
+    if (window.ReditusOBS && window.ReditusOBS.isOnAir) window.ReditusOBS.isOnAir(function (r) { cb(r === null ? OBS_ACTIVE === true : r); });
+    else cb(OBS_ACTIVE === true);
+  }
+  function tkoSound(mode, sched) {
     if (!window.ReditusTakeoverSound || q.get("sound") === "0") return;
-    if (q.get("sound") === "1") { window.ReditusTakeoverSound.play(mode); return; }
-    var go = function (onAir) { if (onAir) window.ReditusTakeoverSound.play(mode); };
-    if (window.ReditusOBS && window.ReditusOBS.isOnAir) window.ReditusOBS.isOnAir(function (r) { go(r === null ? OBS_ACTIVE === true : r); });
-    else go(OBS_ACTIVE === true);
+    tkoOnAir(function (on) { if (on) window.ReditusTakeoverSound.play(mode, sched); });
   }
-  function tkoReveal() {
+  /* The transition: the stream glitches, static creeps in, (takeover only) the guest's camera flickers and tears across
+     the whole screen, the static builds into a white-out laced with red smoke, everything swaps while it's fully
+     covered, then the static clears. Timings in ms. */
+  var TKO_T = { "in": { peak: 6000, hold: 700, fade: 1100, camFrom: 1500 }, out: { peak: 3600, hold: 600, fade: 1000 } };
+  function tkoReveal() { tkoRun("in"); }
+  function tkoExit() { tkoRun("out"); }
+  function tkoRun(mode) {
     TKO_REVEALING = true;
-    var root = document.documentElement;
-    tkoSound();
-    // 1 · the stream starts glitching
+    var T = TKO_T[mode], root = document.documentElement;
+    // the camera's flicker bursts — shared with the sound so every flash has its crackle
+    var sched = [];
+    if (mode === "in") for (var t = T.camFrom; t < T.peak - 450;) {
+      var k = (t - T.camFrom) / (T.peak - T.camFrom), gap = 70 + Math.random() * (420 * (1 - k) + 40), dur = 60 + Math.random() * (140 + 420 * k);
+      sched.push({ at: t + gap, dur: Math.min(dur, T.peak - 450 - (t + gap)) }); t += gap + dur;
+    }
+    sched = sched.filter(function (b) { return b.dur > 30; });
+    tkoSound(mode, sched);
     root.classList.add("tko-glitch");
-    var scan = el("div", "tko-scan", stage);
-    // 2 · static crackles over the GM window
-    setTimeout(function () {
-      var g = (layout().slots || []).filter(function (s) { return s.id === "gm"; })[0];
-      if (g) tkoStatic(g);
-    }, 700);
-    // 3 · a wave of blood-water floods the screen; only once it covers everything do the seats swap and the skin turn red
-    setTimeout(function () {
-      bloodWave(function () { root.classList.remove("tko-glitch"); scan.remove(); tkoApply(); tkoSignal(); },
-                function () { TKO_REVEALING = false; });
-    }, 2300);
+    var scan = el("div", "tko-scan", stage), cam = null;
+    if (mode === "in") tkoOnAir(function (on) { if (on || q.get("tkocam")) cam = tkoCam(); });
+    staticStorm(T, sched, function () { return cam; },
+      function () { root.classList.remove("tko-glitch"); scan.remove(); if (cam) cam.remove(); cam = null; tkoApply(); tkoSignal(); },
+      function () { TKO_REVEALING = false; });
   }
-  // the exit: the stream glitches again, static eats the guest's camera while the DM slides back into the GM window,
-  // and the wave washes the blood away to reveal the normal gold-and-navy look, as if the guest was never there
-  function tkoExit() {
-    TKO_REVEALING = true;
-    var root = document.documentElement;
-    tkoSound("out");
-    root.classList.add("tko-glitch");
-    var scan = el("div", "tko-scan", stage);
-    var g0 = (layout().slots || []).filter(function (s) { return s.id === "gm"; })[0];
-    if (g0) tkoStatic(g0);
-    // the DM goes back to his seat and the gold returns only while the wave covers the screen
-    setTimeout(function () {
-      bloodWave(function () { root.classList.remove("tko-glitch"); scan.remove(); tkoApply(); tkoSignal(); },
-                function () { TKO_REVEALING = false; });
-    }, 2300);
+  // the guest's camera, full screen, played by the overlay itself (same feed as OBS's "Takeover Cam", sound off)
+  function tkoCam() {
+    var box = el("div", "tko-cam", stage); place(box, 0, 0, 1920, 1080);
+    var tint = el("div", "tint", box);
+    var go = function (u) {
+      if (!u) { box.remove(); return; }
+      var h = u.indexOf("#"), base = h < 0 ? u : u.slice(0, h), hash = h < 0 ? "" : u.slice(h);
+      base += (base.indexOf("?") < 0 ? "?" : "&") + "noaudio&cover&cleanoutput&transparent&nocursor";
+      var f = document.createElement("iframe"); f.allow = "autoplay"; f.src = base + hash; box.insertBefore(f, tint);
+    };
+    var forced = q.get("tkocam");
+    if (forced) go(forced);
+    else if (window.ReditusOBS && window.ReditusOBS.inputUrl) window.ReditusOBS.inputUrl(tkoCfg().cam || "Takeover Cam", go);
+    else go(null);
+    return box;
   }
-  function tkoStatic(s) {
-    var c = document.createElement("canvas"); c.className = "tko-static"; c.width = 240; c.height = 135; stage.appendChild(c); place(c, s.x, s.y, s.w, s.h);
-    var x = c.getContext("2d"), img = x.createImageData(240, 135), t0 = performance.now();
-    (function tick(t) {
-      var k = (t - t0) / 1900; if (k >= 1) { c.remove(); return; }
-      var a = k < .35 ? 1 : 1 - (k - .35) / .65;
-      for (var i = 0; i < img.data.length; i += 4) { var v = Math.random() * 255, r = Math.random() < .08; img.data[i] = r ? 200 : v; img.data[i + 1] = r ? 0 : v * .9; img.data[i + 2] = r ? 10 : v * .9; img.data[i + 3] = 255 * a * (Math.random() < .9 ? 1 : .3); }
-      x.putImageData(img, 0, 0); requestAnimationFrame(tick);
-    })(t0);
+  var NZ = null, SMK = null;
+  function noiseFrames() {   // a few frames of bright static with red flecks, reused at random offsets
+    var out = [];
+    for (var f = 0; f < 5; f++) {
+      var cv = document.createElement("canvas"); cv.width = 960; cv.height = 540;
+      var x = cv.getContext("2d"), img = x.createImageData(960, 540), d = new Uint32Array(img.data.buffer);
+      for (var i = 0; i < d.length; i++) {
+        var r = Math.random();
+        if (r < .055) d[i] = 0xff000000 | ((20 + Math.random() * 30) << 16) | ((10 + Math.random() * 20) << 8) | (170 + Math.random() * 85);   // red fleck (ABGR)
+        else { var v = Math.pow(Math.random(), .4) * 255 | 0; d[i] = 0xff000000 | (v << 16) | (v << 8) | v; }
+      }
+      x.putImageData(img, 0, 0); out.push(cv);
+    }
+    return out;
   }
-  // a full-screen wave of blood-water: floods down from the top, holds, then pours away off the bottom.
-  // Layers: a lighter wave just ahead (depth) · the main body with churning marbled blood texture · darker depths ·
-  // a see-through leading edge · glossy rim with foam · shaded drips · drifting specks of light.
-  function liquidTex(W, H, seed) {
-    // tileable fractal noise, warped, mapped to a blood palette
+  function smokeTex(W, H, seed) {   // tileable swirling red smoke (domain-warped fractal noise → red with soft alpha)
     var cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     var x = cv.getContext("2d"), img = x.createImageData(W, H), d = img.data, G = 16, rnd = [], i, j;
     var r = seed || 1; function rand() { r = (r * 16807) % 2147483647; return r / 2147483647; }
     for (i = 0; i < G * G; i++) rnd.push(rand());
-    function vn(px, py, per) {   // periodic value noise
+    function vn(px, py, per) {
       var x0 = Math.floor(px), y0 = Math.floor(py), fx = px - x0, fy = py - y0;
       fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy);
       function g(a, b) { a = ((a % per) + per) % per; b = ((b % per) + per) % per; return rnd[(a * 7 + b * 13) % (G * G)]; }
@@ -482,102 +492,65 @@
       return A + (B - A) * fx + (C - A) * fy + (A - B - C + D2) * fx * fy;
     }
     function fbm(px, py) { var v = 0, amp = .5, f = 1; for (var o = 0; o < 5; o++) { v += amp * vn(px * f, py * f, 4 * f); amp *= .5; f *= 2; } return v; }
-    var stops = [[0, [8, 0, 1]], [.35, [40, 2, 5]], [.55, [92, 6, 12]], [.72, [140, 12, 20]], [.86, [190, 30, 34]], [1, [255, 120, 110]]];
     for (j = 0; j < H; j++) for (i = 0; i < W; i++) {
-      var u = i / W * 4, v = j / H * 4;
-      var w1 = fbm(u + 1.7, v + 9.2), w2 = fbm(u + 8.3, v + 2.8);
-      var n = fbm(u + 2.2 * w1, v + 2.2 * w2);                 // domain-warped: swirling, marbled liquid
-      n = Math.min(1, Math.max(0, (n - .28) * 1.9));
-      n = Math.pow(n, 1.25);
-      for (var k = 1; k < stops.length && stops[k][0] < n; k++);
-      var s0 = stops[k - 1], s1 = stops[Math.min(k, stops.length - 1)], t = s1[0] === s0[0] ? 0 : (n - s0[0]) / (s1[0] - s0[0]), o4 = (j * W + i) * 4;
-      d[o4] = s0[1][0] + (s1[1][0] - s0[1][0]) * t; d[o4 + 1] = s0[1][1] + (s1[1][1] - s0[1][1]) * t; d[o4 + 2] = s0[1][2] + (s1[1][2] - s0[1][2]) * t; d[o4 + 3] = 255;
+      var u = i / W * 4, v = j / H * 4, w1 = fbm(u + 1.7, v + 9.2), w2 = fbm(u + 8.3, v + 2.8);
+      var n = Math.min(1, Math.max(0, (fbm(u + 2.4 * w1, v + 2.4 * w2) - .38) * 2.4)), o4 = (j * W + i) * 4;
+      d[o4] = 120 + 110 * n; d[o4 + 1] = 4 + 14 * n * n; d[o4 + 2] = 10 + 16 * n * n; d[o4 + 3] = 255 * Math.pow(n, 1.35);
     }
     x.putImageData(img, 0, 0); return cv;
   }
-  var LIQ = null;
-  function bloodWave(atPeak, done) {
-    if (!LIQ) LIQ = [liquidTex(320, 180, 7), liquidTex(320, 180, 31)];
-    // drawn at half resolution and scaled up (the liquid is soft, so it looks the same and costs a quarter as much)
-    var c = document.createElement("canvas"); c.className = "tko-wave"; c.width = 960; c.height = 540; stage.appendChild(c); place(c, 0, 0, 1920, 1080);
-    var x = c.getContext("2d"), t0 = performance.now(), FILL = 1500, HOLD = 450, DRAIN = 1900, peaked = false;
-    x.imageSmoothingEnabled = true; x.imageSmoothingQuality = "low";
-    var pats = LIQ.map(function (cv) { return x.createPattern(cv, "repeat"); });
-    var drips = [], specks = [], foam = [];
-    for (var i = 0; i < 34; i++) drips.push({ x: Math.random() * 1920, w: 6 + Math.random() * 16, len: 60 + Math.random() * 260, sp: .6 + Math.random() * .8 });
-    for (i = 0; i < 90; i++) specks.push({ x: Math.random() * 1920, y: Math.random() * 1200, r: .8 + Math.random() * 2.6, v: 10 + Math.random() * 40, a: .15 + Math.random() * .35 });
-    for (i = 0; i < 70; i++) foam.push({ x: Math.random() * 1920, r: 2 + Math.random() * 7, o: Math.random() * 14 });
-    function edge(px, base, t) { return base + Math.sin(px * .006 + t * 2.1) * 26 + Math.sin(px * .017 - t * 3.3) * 12 + Math.sin(px * .0023 + t) * 34; }
-    function shape(top, bottom, t, lead) {
-      x.beginPath();
-      x.moveTo(0, top == null ? -60 : edge(0, top, t + 1.7));
-      for (var X = 0; X <= 1920; X += 20) x.lineTo(X, top == null ? -60 : edge(X, top, t + 1.7));
-      for (var X2 = 1920; X2 >= 0; X2 -= 20) x.lineTo(X2, bottom == null ? 1140 : edge(X2, bottom, t * (lead ? 1.25 : 1) + (lead ? 2.4 : 0)) + (lead || 0));
-      x.closePath();
+  function staticStorm(T, sched, getCam, atPeak, done) {
+    if (!NZ) NZ = noiseFrames();
+    if (!SMK) SMK = [smokeTex(256, 144, 11), smokeTex(256, 144, 47)];
+    var c = document.createElement("canvas"); c.className = "tko-storm"; c.width = 960; c.height = 540; stage.appendChild(c); place(c, 0, 0, 1920, 1080);
+    var x = c.getContext("2d"), t0 = performance.now(), peakAt = 0, nextJit = 0, jit = null;
+    var pats = NZ.map(function (n) { return x.createPattern(n, "repeat"); }), smk = SMK.map(function (s) { return x.createPattern(s, "repeat"); });
+    var M = window.DOMMatrix ? function (s, ox, oy) { return new DOMMatrix([s, 0, 0, s, ox, oy]); } : null;
+    function grain(alpha) { var p = pats[Math.random() * pats.length | 0]; if (p.setTransform && M) p.setTransform(M(1, Math.random() * 960, Math.random() * 540)); x.globalAlpha = alpha; x.fillStyle = p; x.fillRect(0, 0, 960, 540); }
+    function smoke(alpha, t) {
+      x.globalAlpha = alpha;
+      for (var i = 0; i < 2; i++) { var p = smk[i]; if (p.setTransform && M) p.setTransform(M(i ? 3.1 : 4.4, (i ? -1 : 1) * t * (i ? 34 : 22), t * (i ? 18 : -27))); x.fillStyle = p; x.fillRect(0, 0, 960, 540); }
     }
-    function texture(t) {
-      // two marbled layers drifting at different speeds and scales: the liquid churns
-      var M = window.DOMMatrix ? function (sx, ox, oy) { return new DOMMatrix([sx, 0, 0, sx, ox, oy]); } : null;
-      pats[0].setTransform && M && pats[0].setTransform(M(7.5, t * 38, t * 64));
-      x.fillStyle = pats[0]; x.fillRect(0, 0, 1920, 1080);
-      x.globalCompositeOperation = "screen"; x.globalAlpha = .38;
-      pats[1].setTransform && M && pats[1].setTransform(M(5.2, -t * 52, t * 30));
-      x.fillStyle = pats[1]; x.fillRect(0, 0, 1920, 1080);
-      x.globalCompositeOperation = "source-over"; x.globalAlpha = 1;
+    function level(e) {   // how much of the screen the static covers
+      var p = T.peak, ease = function (k) { return k * k; };
+      if (e < 1400) return .2 * (e / 1400);
+      if (e < p - 1300) return .2 + .3 * ((e - 1400) / Math.max(1, p - 2700));
+      return .5 + .5 * ease(Math.min(1, (e - (p - 1300)) / 1300));
     }
-    function body(top, bottom, t) {
-      // lighter, see-through wave running just ahead of the main body: depth
-      if (bottom != null) {
-        x.save(); shape(top, bottom, t, 46); x.clip(); x.globalAlpha = .38; texture(t * .7 + 3); x.globalAlpha = 1;
-        x.fillStyle = "rgba(170,20,30,.25)"; x.fillRect(0, 0, 1920, 1080); x.restore();
-      }
-      x.save(); shape(top, bottom, t, 0); x.clip();
-      texture(t);
-      // depth: darker the further from the surface
-      var surf = bottom == null ? 1080 : bottom, dg = x.createLinearGradient(0, surf - 900, 0, surf);
-      dg.addColorStop(0, "rgba(8,0,1,.72)"); dg.addColorStop(.7, "rgba(20,0,3,.25)"); dg.addColorStop(.93, "rgba(0,0,0,0)"); dg.addColorStop(1, "rgba(255,70,60,.18)");
-      x.fillStyle = dg; x.fillRect(0, 0, 1920, 1080);
-      if (top != null) { var tg = x.createLinearGradient(0, top - 40, 0, top + 260); tg.addColorStop(0, "rgba(255,90,80,.2)"); tg.addColorStop(1, "rgba(0,0,0,0)"); x.fillStyle = tg; x.fillRect(0, 0, 1920, 1080); }
-      // drifting specks of light suspended in the liquid
-      specks.forEach(function (p) {
-        var y = (p.y - t * p.v) % 1200; if (y < -20) y += 1220;
-        x.fillStyle = "rgba(255,170,150," + p.a + ")"; x.beginPath(); x.arc(p.x + Math.sin(t * 1.3 + p.y) * 8, y, p.r, 0, 7); x.fill();
-      });
-      x.restore();
-    }
-    function rim(bottom, t, dripsDown) {
-      // glossy highlight on the leading edge + foam bubbles + a soft shadow cast below it
-      var sh = x.createLinearGradient(0, bottom - 20, 0, bottom + 70); sh.addColorStop(0, "rgba(0,0,0,.35)"); sh.addColorStop(1, "rgba(0,0,0,0)");
-      x.save(); x.beginPath(); for (var X = 0; X <= 1920; X += 20) { var y0 = edge(X, bottom, t); X ? x.lineTo(X, y0) : x.moveTo(X, y0); }
-      x.lineTo(1920, bottom + 120); x.lineTo(0, bottom + 120); x.closePath(); x.fillStyle = sh; x.fill(); x.restore();
-      x.lineCap = "round";
-      x.strokeStyle = "rgba(255,120,110,.55)"; x.lineWidth = 6; x.beginPath();
-      for (X = 0; X <= 1920; X += 20) { var y = edge(X, bottom, t) - 7; X ? x.lineTo(X, y) : x.moveTo(X, y); } x.stroke();
-      x.strokeStyle = "rgba(255,225,215,.55)"; x.lineWidth = 2; x.beginPath();
-      for (X = 0; X <= 1920; X += 20) { var y2 = edge(X, bottom, t) - 11 + Math.sin(X * .05 + t * 6) * 1.5; X ? x.lineTo(X, y2) : x.moveTo(X, y2); } x.stroke();
-      foam.forEach(function (f) {
-        var fy = edge(f.x, bottom, t) - f.o; x.strokeStyle = "rgba(255,190,180,.45)"; x.lineWidth = 1.2; x.fillStyle = "rgba(120,10,16,.6)";
-        x.beginPath(); x.arc(f.x + Math.sin(t * 2 + f.o) * 3, fy, f.r * (.8 + .2 * Math.sin(t * 4 + f.x)), 0, 7); x.fill(); x.stroke();
-      });
-      if (dripsDown) drips.forEach(function (d) {
-        var y0 = edge(d.x, bottom, t), L = d.len * d.sp * Math.min(1, (bottom + 200) / 600);
-        var g = x.createLinearGradient(d.x - d.w / 2, 0, d.x + d.w / 2, 0); g.addColorStop(0, "#3d0006"); g.addColorStop(.35, "#8d0a14"); g.addColorStop(.55, "#c8303a"); g.addColorStop(1, "#4a0007");
-        x.fillStyle = g; x.beginPath(); x.moveTo(d.x - d.w / 2, y0 - 6); x.lineTo(d.x + d.w / 2, y0 - 6); x.lineTo(d.x + d.w * .3, y0 + L);
-        x.arc(d.x, y0 + L, d.w * .45, 0, Math.PI); x.lineTo(d.x - d.w * .3, y0 + L); x.closePath(); x.fill();
-        x.fillStyle = "rgba(255,200,190,.5)"; x.beginPath(); x.arc(d.x - d.w * .12, y0 + L - d.w * .1, d.w * .14, 0, 7); x.fill();
-      });
-    }
-    function ease(k) { return k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; }
     (function tick(now) {
-      var e = now - t0, t = e / 1000; x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, 960, 540); x.setTransform(.5, 0, 0, .5, 0, 0);
-      if (e < FILL) { var b = -320 + ease(e / FILL) * 1560; body(null, b, t); rim(b, t, true); }
-      else if (e < FILL + HOLD) { body(null, null, t); if (!peaked) { peaked = true; atPeak && atPeak(); } }
-      else if (e < FILL + HOLD + DRAIN) {
-        if (!peaked) { peaked = true; atPeak && atPeak(); }   // a slow frame skipped the hold: switch the look now anyway
-        var k = ease((e - FILL - HOLD) / DRAIN), top = -80 + k * 1300; body(top, null, t);
-        // the trailing surface as it pours away: a thin glossy line
-        x.strokeStyle = "rgba(255,120,110,.4)"; x.lineWidth = 3; x.beginPath(); for (var X = 0; X <= 1920; X += 20) { var y = edge(X, top, t + 1.7) + 4; X ? x.lineTo(X, y) : x.moveTo(X, y); } x.stroke(); }
-      else { if (!peaked) { peaked = true; atPeak && atPeak(); } c.remove(); done && done(); return; }
+      var e = now - t0, t = e / 1000, L, cam = getCam();
+      x.globalAlpha = 1; x.clearRect(0, 0, 960, 540);
+      if (!peakAt && e >= T.peak) { peakAt = now; }
+      if (peakAt) {
+        var e2 = now - peakAt;
+        if (e2 >= T.hold + T.fade) { c.remove(); done && done(); return; }
+        L = e2 < T.hold ? 1 : 1 - (e2 - T.hold) / T.fade;
+        grain(L); smoke(L * .55, t);
+        if (e2 < T.hold) { x.globalAlpha = .12 + .1 * Math.random(); x.fillStyle = "#ff2a2a"; x.fillRect(0, 0, 960, 540); }   // red pulse through the white-out
+      } else {
+        L = level(e);
+        grain(L);
+        // tearing bands of full static, more and more of them
+        var bands = Math.floor(L * 9 + Math.random() * 3);
+        for (var b = 0; b < bands; b++) { var by = Math.random() * 540, bh = 3 + Math.random() * (10 + L * 70); x.save(); x.beginPath(); x.rect(0, by, 960, bh); x.clip(); grain(.55 + L * .45); x.restore(); }
+        smoke(Math.min(.65, .1 + L * .55), t);
+      }
+      // the guest's camera: flashes in during its bursts, jittering, torn into strips, sometimes blood-tinted
+      if (cam) {
+        var on = !peakAt && sched.some(function (s) { return e >= s.at && e < s.at + s.dur; });
+        if (!on) cam.style.opacity = "0";
+        else {
+          if (now >= nextJit) {
+            nextJit = now + 40 + Math.random() * 70;
+            var tx = (Math.random() - .5) * 70, sk = (Math.random() - .5) * 6, top = Math.random() < .5 ? Math.random() * 30 : 0, bot = Math.random() < .5 ? Math.random() * 30 : 0;
+            jit = { o: Math.random() < .25 ? .45 + Math.random() * .3 : .9 + Math.random() * .1, tf: "translateX(" + tx + "px) skewX(" + sk + "deg) scale(" + (1 + Math.random() * .06) + ")",
+                    clip: "inset(" + top + "% 0 " + bot + "% 0)", tint: Math.random() < .35 ? .25 + Math.random() * .35 : 0,
+                    fl: Math.random() < .3 ? "contrast(1.6) saturate(.2) brightness(1.2)" : Math.random() < .3 ? "contrast(1.3) hue-rotate(-12deg) saturate(1.6)" : "contrast(1.15)" };
+          }
+          cam.style.opacity = jit.o; cam.style.transform = jit.tf; cam.style.clipPath = jit.clip; cam.style.filter = jit.fl; cam.firstChild && (cam.querySelector(".tint").style.opacity = jit.tint);
+        }
+      }
+      if (peakAt && !c._swapped) { c._swapped = true; requestAnimationFrame(function () { atPeak && atPeak(); }); }   // swap once the white-out is on screen
       requestAnimationFrame(tick);
     })(t0);
   }

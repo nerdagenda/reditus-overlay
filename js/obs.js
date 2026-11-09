@@ -12,7 +12,7 @@
   "use strict";
   var q = new URLSearchParams(location.search);
   var PASS = q.get("obs");
-  if (PASS == null) { window.ReditusOBS = { place: function () {}, switchTo: function () {}, isOnAir: function (cb) { cb(null); } }; return; }
+  if (PASS == null) { window.ReditusOBS = { place: function () {}, switchTo: function () {}, isOnAir: function (cb) { cb(null); }, inputUrl: function (n, cb) { cb(null); } }; return; }
   var PORT = +(q.get("obsport") || 4455), FIXED_SCENE = q.get("obsscene") || "", DEBUG = q.get("obsdebug") === "1";
   var ws = null, ready = false, reqN = 0, pending = {}, sceneName = FIXED_SCENE, canvasK = 1, lastSig = "", wanted = null, retry = null, stateMsg = "starting";
 
@@ -174,7 +174,14 @@
     Promise.all([findScene(), call("GetCurrentProgramScene")]).then(function (r) { cb(r[0] === (r[1].currentProgramSceneName || r[1].sceneName)); }, function () { cb(null); });
   }
 
+  // the link a browser source in OBS is showing (the takeover reveal plays the guest's camera from "Takeover Cam")
+  function inputUrl(name, cb) {
+    if (!ready) return cb(null);
+    call("GetInputSettings", { inputName: name }).then(function (r) { cb(((r || {}).inputSettings || {}).url || null); }, function () { say("couldn't find the “" + name + "” source", true); cb(null); });
+  }
+
   window.ReditusOBS = {
+    inputUrl: inputUrl,
     isOnAir: isOnAir,
     switchTo: switchTo,
     place: function (slots) { wanted = slots; apply(slots); },
