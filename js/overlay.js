@@ -379,12 +379,13 @@
     if (sig === wsig) { tkoSeen = true; return; }   // (first check-in with no takeover yet still counts as "seen")
     TKO = t;
     var age = (now || Date.now()) - (t ? t.id : 0);
-    var fresh = t && t.reveal && was !== undefined && age < 10000 && tkoSeen;
-    var seen = tkoSeen; tkoSeen = true;
+    // a takeover/ending pressed in the last 15 s plays its wave — even on an overlay that has just (re)loaded
+    var fresh = t && t.reveal && age < 15000;
+    tkoSeen = true;
     if (fresh && !UNDER) { if (t.on) tkoReveal(); else tkoExit(); return; }
-    if (UNDER && seen && t && t.reveal && age < 20000 && TKO_PEAKED !== sig) {
+    if (UNDER && fresh && TKO_PEAKED !== sig) {
       // wait for the top overlay's wave to cover the screen (fallback: a few seconds after it should have)
-      clearTimeout(TKO_HOLD); TKO_HOLD = setTimeout(tkoApply, Math.max(0, 12000 - age));
+      clearTimeout(TKO_HOLD); TKO_HOLD = setTimeout(tkoApply, Math.max(0, 15000 - age));
       return;
     }
     if (TKO_REVEALING) return;
@@ -1196,7 +1197,7 @@
       });
     }
     // inside OBS (with &obs=…): line the real camera sources up with these windows
-    if (window.ReditusOBS && !LOCAL_PREVIEW) window.ReditusOBS.place(L.slots);
+    if (window.ReditusOBS && !LOCAL_PREVIEW && !UNDER) window.ReditusOBS.place(L.slots);   // only the top overlay moves cameras (even if the loops link has &obs= in it)
     document.documentElement.setAttribute("data-ready", "1");
   }
 
