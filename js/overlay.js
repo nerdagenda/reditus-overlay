@@ -362,30 +362,54 @@
      "Reveal" plays the on-air moment first: glitch → static in the GM window → a wave of blood-water → new skin. */
   function tkoCfg() { return (RAW && RAW.takeover) || {}; }
   function tkoData(d) {
-    if (!d || !TKO || !TKO.on) return d;
+    if (!d || !TKO_SHOWN) return d;   // the seating that's on screen now (changes only at the wave's peak)
     var c = d.takeover || {}, x = JSON.parse(JSON.stringify(d)), as = c.dmAs || "verris";
     x.gm = Object.assign({}, x.gm, { label: c.gmLabel || "Guest GM", cam: c.cam || "Takeover Cam", mode: "cam" });
     (x.party || []).forEach(function (p) { if (p.id === as) { p.seat = true; p.mode = "cam"; p.cam = c.dmCam || "GM Cam"; } });
     Object.keys(x.scenes || {}).forEach(function (k) { var o = x.scenes[k] && x.scenes[k].order; if (o && o.length && o.indexOf(as) < 0) o.push(as); });
     return x;
   }
-  var TKO_REVEALING = false;
+  var TKO_REVEALING = false, TKO_SHOWN = false;
+  /* Timing: nothing moves and nothing turns red until the blood wave fully covers the screen.
+     The top overlay plays the reveal and, at the wave's peak, swaps the seats + skin and tells the bottom (loops) layer
+     to do the same at that exact moment (BroadcastChannel / localStorage — both layers live in the same OBS). */
+  var TKO_PEAKED = "", TKO_HOLD = null;
   function tkoUpdate(t, now) {
     var was = TKO, sig = t ? t.on + "|" + t.id : "", wsig = was ? was.on + "|" + was.id : "";
-    if (sig === wsig) return;
+    if (sig === wsig) { tkoSeen = true; return; }   // (first check-in with no takeover yet still counts as "seen")
     TKO = t;
-    var fresh = t && t.reveal && was !== undefined && (now || Date.now()) - t.id < 10000 && tkoSeen;
-    tkoSeen = true;
+    var age = (now || Date.now()) - (t ? t.id : 0);
+    var fresh = t && t.reveal && was !== undefined && age < 10000 && tkoSeen;
+    var seen = tkoSeen; tkoSeen = true;
     if (fresh && !UNDER) { if (t.on) tkoReveal(); else tkoExit(); return; }
+    if (UNDER && seen && t && t.reveal && age < 20000 && TKO_PEAKED !== sig) {
+      // wait for the top overlay's wave to cover the screen (fallback: a few seconds after it should have)
+      clearTimeout(TKO_HOLD); TKO_HOLD = setTimeout(tkoApply, Math.max(0, 12000 - age));
+      return;
+    }
     if (TKO_REVEALING) return;
     tkoApply();
   }
   var tkoSeen = false;
   function tkoApply() {
-    var on = !!(TKO && TKO.on);
-    document.documentElement.classList.toggle("tko", on);
+    clearTimeout(TKO_HOLD);
+    TKO_SHOWN = !!(TKO && TKO.on);
+    document.documentElement.classList.toggle("tko", TKO_SHOWN);
     if (RAW) { D = tkoData(RAW); render(); }
   }
+  var TKO_BC = null; try { TKO_BC = new BroadcastChannel("reditus-tko"); } catch (e) {}
+  function tkoSignal() {
+    var m = { type: "reditus:tko-peak", t: TKO, n: Date.now() };
+    try { if (TKO_BC) TKO_BC.postMessage(m); } catch (e) {}
+    try { localStorage.setItem("reditus-tko-peak", JSON.stringify(m)); } catch (e) {}
+  }
+  function tkoPeakHeard(m) {
+    if (!UNDER || !m || m.type !== "reditus:tko-peak" || !m.t || Date.now() - m.n > 20000) return;
+    var sig = m.t.on + "|" + m.t.id; if (TKO_PEAKED === sig) return;
+    TKO_PEAKED = sig; TKO = m.t; tkoSeen = true; tkoApply();
+  }
+  if (TKO_BC) TKO_BC.onmessage = function (e) { tkoPeakHeard(e.data); };
+  addEventListener("storage", function (e) { if (e.key === "reditus-tko-peak" && e.newValue) try { tkoPeakHeard(JSON.parse(e.newValue)); } catch (x) {} });
   // the reveal's sound plays only from the overlay that is on stream (all the other scenes' overlays stay quiet)
   var OBS_ACTIVE = null;
   addEventListener("obsSourceActiveChanged", function (e) { OBS_ACTIVE = !!(e.detail && e.detail.active); });
@@ -403,15 +427,14 @@
     // 1 · the stream starts glitching
     root.classList.add("tko-glitch");
     var scan = el("div", "tko-scan", stage);
-    // 2 · seats swap under the glitch: OBS slides the guest's camera into the GM window, static crackles over it
+    // 2 · static crackles over the GM window
     setTimeout(function () {
-      D = tkoData(RAW); render();
       var g = (layout().slots || []).filter(function (s) { return s.id === "gm"; })[0];
       if (g) tkoStatic(g);
     }, 700);
-    // 3 · a wave of blood-water floods the screen; at its peak the new skin is underneath
+    // 3 · a wave of blood-water floods the screen; only once it covers everything do the seats swap and the skin turn red
     setTimeout(function () {
-      bloodWave(function () { root.classList.remove("tko-glitch"); scan.remove(); root.classList.add("tko"); render(); },
+      bloodWave(function () { root.classList.remove("tko-glitch"); scan.remove(); tkoApply(); tkoSignal(); },
                 function () { TKO_REVEALING = false; });
     }, 2300);
   }
@@ -425,9 +448,9 @@
     var scan = el("div", "tko-scan", stage);
     var g0 = (layout().slots || []).filter(function (s) { return s.id === "gm"; })[0];
     if (g0) tkoStatic(g0);
-    setTimeout(function () { D = tkoData(RAW); render(); }, 700);   // TKO is already off, so this is the normal seating
+    // the DM goes back to his seat and the gold returns only while the wave covers the screen
     setTimeout(function () {
-      bloodWave(function () { root.classList.remove("tko-glitch"); scan.remove(); root.classList.remove("tko"); render(); },
+      bloodWave(function () { root.classList.remove("tko-glitch"); scan.remove(); tkoApply(); tkoSignal(); },
                 function () { TKO_REVEALING = false; });
     }, 2300);
   }
