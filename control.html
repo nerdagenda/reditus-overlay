@@ -763,9 +763,11 @@ label.f input:focus, label.f select:focus, label.f textarea:focus { border-color
     var T = function () { S.takeover = S.takeover || {}; return S.takeover; };
     tg.appendChild(field("Guest GM nameplate", (S.takeover && S.takeover.gmLabel) || "Guest GM", function (v) { T().gmLabel = v; }, { id: "t-label" }));
     tg.appendChild(field("DM plays during takeover", (S.takeover && S.takeover.dmAs) || "verris", function (v) { T().dmAs = v; }, { id: "t-as", options: S.party.map(function (p) { return [p.id, p.name || p.fullName]; }) }));
+    tg.appendChild(field("DM's camera source name in OBS", (S.takeover && S.takeover.dmCam) || "GM Cam", function (v) { T().dmCam = v.trim() || "GM Cam"; }, { id: "t-dmcam" }));
+    tg.appendChild(field("Guest's camera source name in OBS", (S.takeover && S.takeover.cam) || "Takeover Cam", function (v) { T().cam = v.trim() || "Takeover Cam"; }, { id: "t-cam" }));
     tc.appendChild(tg);
     var th = document.createElement("p"); th.className = "hint";
-    th.innerHTML = "During a takeover the <b>Takeover Cam</b> source (the guest's camera) fills the GM window and <b>GM Cam</b> (the regular DM) moves to this character's seat. Start it from Live mode → Takeover.";
+    th.innerHTML = "During a takeover the guest's camera source fills the GM window and the DM's camera source moves to this character's seat. The names must match the sources in OBS exactly, and the DM's camera must sit directly in each scene (not inside a group or nested scene) so it can be moved. Start it from Live mode → Takeover.";
     tc.appendChild(th); root.appendChild(tc);
 
     var c = document.createElement("div"); c.className = "card"; c.innerHTML = "<h3>Show</h3>";
