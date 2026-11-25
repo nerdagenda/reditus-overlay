@@ -1,6 +1,6 @@
 /* ==========================================================================
    THE REDITUS CAMPAIGN — LIVE OVERLAY DATA
-   Saved from the control panel (control.html) on 11/17/2026, 7:50:57 PM.
+   Saved from the control panel (control.html) on 11/24/2026, 8:12:38 PM.
    You can still edit this by hand; the control panel will read it back.
    Bump `build` only when the overlay CODE changes (forces a full reload).
    ========================================================================== */
@@ -8,7 +8,7 @@
 window.REDITUS = {
   "build": 15,
   "show": {
-    "episode": 116,
+    "episode": 118,
     "schedule": "Every Tuesday @ 8:00PM EST"
   },
   "gm": {
